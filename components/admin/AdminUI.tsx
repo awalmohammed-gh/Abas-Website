@@ -20,7 +20,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
 
 export function Panel({ title, actions, children, className }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-2xl border border-line bg-white", className)}>
+    <section className={cn("min-w-0 max-w-full rounded-2xl border border-line bg-white", className)}>
       {(title || actions) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3.5 sm:px-5">
           {title && <h2 className="font-display text-base font-semibold text-ink">{title}</h2>}
@@ -87,7 +87,7 @@ export function FilterTabs<T extends string>({
   label: string;
 }) {
   return (
-    <div role="tablist" aria-label={label} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+    <div role="tablist" aria-label={label} className="flex min-w-0 max-w-full gap-1 overflow-x-auto overscroll-x-contain p-1">
       {options.map((option) => (
         <button
           key={option.value}

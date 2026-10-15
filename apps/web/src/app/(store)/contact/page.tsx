@@ -25,7 +25,7 @@ async function ContactDetails() {
   ].filter(Boolean) as { icon: typeof FiPhone; label: string; value: string; href?: string; external?: boolean }[];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <ul className="space-y-3">
         {items.length === 0 && (
           <li className="rounded-2xl border border-line bg-white p-5 text-sm text-muted">Contact details will be published here shortly.</li>

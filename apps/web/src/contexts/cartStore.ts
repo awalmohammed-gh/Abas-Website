@@ -1,154 +1,125 @@
-import { z } from "zod";
-import { LIMITS, objectIdSchema, type CartQuote } from "@aba-mart/shared";
+﻿import type { CartQuote } from "@aba-mart/shared";
+import { errorMessage } from "@/lib/api";
+import { saveLastOrder } from "@/components/cart/lastOrderStore";
+import { ensureGuestSession, GUEST_CHANGED_EVENT, guestApi } from "@/lib/guest-api";
 import { cartLineKey, type CartLine, type CartLineInput } from "@/types/cart";
-
-const STORAGE_KEY = "aba-mart:cart:v1";
 
 export interface CartState {
   lines: CartLine[];
+  quote: CartQuote | null;
   hydrated: boolean;
+  pending: boolean;
+  error: string | null;
 }
 
-export type CartAction =
-  | { type: "add"; line: CartLineInput; quantity: number }
-  | { type: "setQuantity"; key: string; quantity: number }
-  | { type: "remove"; key: string }
-  | { type: "clear" }
-  | { type: "applyQuote"; quote: CartQuote }
-  | { type: "replace"; lines: CartLine[] };
-
-const limitFor = (line: Pick<CartLine, "maxQuantity">) => Math.max(0, Math.min(line.maxQuantity, LIMITS.maxLineQuantity));
-
-/** Pure reducer: quantities never exceed the known stock or the per-line limit. */
-export function cartReducer(state: CartState, action: CartAction): CartState {
-  switch (action.type) {
-    case "add": {
-      const key = cartLineKey(action.line.productId, action.line.variantId);
-      const existing = state.lines.find((l) => l.key === key);
-      if (existing) {
-        const updated = { ...existing, ...action.line, key };
-        updated.quantity = Math.min(existing.quantity + action.quantity, limitFor(updated));
-        return { ...state, lines: state.lines.map((l) => (l.key === key ? updated : l)) };
-      }
-      if (state.lines.length >= LIMITS.maxCartLines) return state;
-      const line: CartLine = { ...action.line, key, quantity: 0 };
-      line.quantity = Math.min(Math.max(1, action.quantity), limitFor(line));
-      return line.quantity > 0 ? { ...state, lines: [...state.lines, line] } : state;
-    }
-    case "setQuantity":
-      return {
-        ...state,
-        lines: state.lines.map((l) =>
-          l.key === action.key ? { ...l, quantity: Math.min(Math.max(1, Math.floor(action.quantity)), Math.max(1, limitFor(l))) } : l,
-        ),
-      };
-    case "remove":
-      return { ...state, lines: state.lines.filter((l) => l.key !== action.key) };
-    case "clear":
-      return { ...state, lines: [] };
-    case "applyQuote": {
-      // Refresh display prices and stock from the server's authoritative quote.
-      const byKey = new Map(action.quote.lines.map((q) => [cartLineKey(q.productId, q.variantId), q]));
-      return {
-        ...state,
-        lines: state.lines.map((line) => {
-          const quoted = byKey.get(line.key);
-          if (!quoted) return line;
-          return {
-            ...line,
-            name: quoted.name,
-            image: quoted.image ?? line.image,
-            unitPrice: quoted.unitPrice || line.unitPrice,
-            compareAtPrice: quoted.compareAtPrice,
-            maxQuantity: quoted.available,
-            quantity: quoted.status === "quantity_adjusted" ? quoted.quantity : line.quantity,
-          };
-        }),
-      };
-    }
-    case "replace":
-      return { ...state, lines: action.lines };
-  }
-}
-
-/* ------------------------------------------------------------ Persistence */
-
-const storedLineSchema = z.object({
-  key: z.string().max(80),
-  productId: objectIdSchema,
-  variantId: objectIdSchema.nullable(),
-  slug: z.string().max(140),
-  name: z.string().max(200),
-  image: z.string().max(500).nullable(),
-  attributes: z.array(z.object({ name: z.string().max(30), value: z.string().max(40) })).max(3),
-  unitPrice: z.int().min(0),
-  compareAtPrice: z.int().min(0).nullable(),
-  maxQuantity: z.int().min(0),
-  quantity: z.int().min(1).max(LIMITS.maxLineQuantity),
-});
-
-/** Anything malformed or tampered with in localStorage is discarded line by line. */
-function readStorage(): CartLine[] {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .slice(0, LIMITS.maxCartLines)
-      .map((item) => storedLineSchema.safeParse(item))
-      .filter((r) => r.success)
-      .map((r) => ({ ...r.data, key: cartLineKey(r.data.productId, r.data.variantId) }));
-  } catch {
-    return [];
-  }
-}
-
-function writeStorage(lines: CartLine[]): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
-  } catch {
-    // Storage full or disabled (private mode): the cart still works for this visit.
-  }
-}
-
-/* ------------------------------------------------- External store for React */
-
-const SERVER_STATE: CartState = { lines: [], hydrated: false };
-let state: CartState | null = null;
+const SERVER_STATE: CartState = { lines: [], quote: null, hydrated: false, pending: false, error: null };
+let state = SERVER_STATE;
+let generation = 0;
+let requestVersion = 0;
+let queue: Promise<unknown> = Promise.resolve();
+let channel: BroadcastChannel | null = null;
 const listeners = new Set<() => void>();
 
-function current(): CartState {
-  if (!state) state = { lines: readStorage(), hydrated: true };
-  return state;
+function emit(update: Partial<CartState>) {
+  state = { ...state, ...update };
+  listeners.forEach((listener) => listener());
 }
 
-function emit() {
-  for (const listener of listeners) listener();
+function acceptQuote(quote: CartQuote) {
+  const lines: CartLine[] = quote.lines.map((line) => ({
+    key: cartLineKey(line.productId, line.variantId),
+    productId: line.productId, variantId: line.variantId,
+    slug: line.slug, name: line.name, image: line.image, attributes: line.attributes,
+    unitPrice: line.unitPrice, compareAtPrice: line.compareAtPrice,
+    maxQuantity: line.available, quantity: line.requestedQuantity,
+  }));
+  emit({ lines, quote, hydrated: true, error: null });
 }
 
+async function refresh(): Promise<void> {
+  const visit = generation;
+  const version = ++requestVersion;
+  try {
+    await ensureGuestSession(true);
+    const quote = await guestApi.get<CartQuote>("/cart");
+    if (visit === generation && version === requestVersion) acceptQuote(quote);
+  } catch (error) {
+    if (visit === generation && version === requestVersion) emit({ hydrated: true, error: errorMessage(error) });
+  }
+}
+
+function mutate(path: string, method: "post" | "patch" | "delete", body?: unknown): Promise<void> {
+  const visit = generation;
+  const work = queue.catch(() => undefined).then(async () => {
+    if (visit !== generation) throw new Error("Your guest session changed. Please try again.");
+    ++requestVersion;
+    emit({ pending: true, error: null });
+    try {
+      const quote = await (method === "delete" ? guestApi.delete<CartQuote>(path) : guestApi[method]<CartQuote>(path, body));
+      if (visit !== generation) throw new Error("Your guest session changed. Please try again.");
+      ++requestVersion;
+      acceptQuote(quote);
+      channel?.postMessage("refresh");
+    } catch (error) {
+      if (visit === generation) emit({ error: errorMessage(error) });
+      throw error;
+    } finally {
+      if (visit === generation) emit({ pending: false });
+    }
+  });
+  queue = work;
+  return work;
+}
+
+function sessionChanged() {
+  saveLastOrder(null);
+  generation += 1;
+  requestVersion += 1;
+  emit({ ...SERVER_STATE });
+  void refresh();
+}
+
+/** Server-owned cart; no cart or ownership secret is read from browser storage. */
 export const cartStore = {
-  getSnapshot: (): CartState => current(),
+  getSnapshot: (): CartState => state,
   getServerSnapshot: (): CartState => SERVER_STATE,
+  refresh,
+  applyQuote: acceptQuote,
+  addItem: (line: CartLineInput, quantity = 1) => mutate("/cart/items", "post", {
+    productId: line.productId, variantId: line.variantId, quantity,
+  }),
+  setQuantity: (key: string, quantity: number) => mutate(`/cart/items/${encodeURIComponent(key)}`, "patch", { quantity }),
+  removeItem: (key: string) => mutate(`/cart/items/${encodeURIComponent(key)}`, "delete"),
+  clear: () => mutate("/cart", "delete"),
+  notifySessionChanged: () => channel?.postMessage("session"),
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY) {
-        state = { lines: readStorage(), hydrated: true };
-        emit();
+    if (listeners.size === 1) {
+      void refresh();
+      window.addEventListener("focus", refresh);
+      window.addEventListener(GUEST_CHANGED_EVENT, sessionChanged);
+      if (typeof BroadcastChannel !== "undefined") {
+        channel = new BroadcastChannel("aba-guest-cart");
+        channel.onmessage = (event) => {
+          if (event.data === "session") {
+            window.dispatchEvent(new Event(GUEST_CHANGED_EVENT));
+          } else {
+            void refresh();
+          }
+        };
       }
-    };
-    window.addEventListener("storage", onStorage);
+    }
     return () => {
       listeners.delete(listener);
-      window.removeEventListener("storage", onStorage);
+      if (!listeners.size) {
+        generation += 1;
+        requestVersion += 1;
+        state = SERVER_STATE;
+        window.removeEventListener("focus", refresh);
+        window.removeEventListener(GUEST_CHANGED_EVENT, sessionChanged);
+        channel?.close();
+        channel = null;
+      }
     };
-  },
-  dispatch(action: CartAction): void {
-    const next = cartReducer(current(), action);
-    if (next === state) return;
-    state = next;
-    writeStorage(next.lines);
-    emit();
   },
 };

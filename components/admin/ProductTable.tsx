@@ -130,7 +130,7 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
       </ul>
 
       {/* Tablets and up: table */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain md:block" role="region" aria-label="Products table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-cream/60 text-xs uppercase tracking-wider text-muted">
             <tr>

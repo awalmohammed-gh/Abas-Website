@@ -13,8 +13,7 @@ export const siteConfig = {
   mainNav: [
     { label: "Home", href: "/" },
     { label: "Shop", href: "/shop" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
+    { label: "My orders", href: "/my-orders" },
   ],
 } as const;
 

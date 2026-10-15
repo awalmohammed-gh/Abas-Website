@@ -105,7 +105,7 @@ function ProductsContent() {
             { value: "archived", label: "Archived" },
           ]}
         />
-        <div className="grid gap-2 sm:grid-cols-[1fr_200px_160px]">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_160px]">
           <div className="relative">
             <FiSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
             <label htmlFor="admin-product-search" className="sr-only">

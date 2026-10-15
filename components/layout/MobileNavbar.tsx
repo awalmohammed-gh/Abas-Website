@@ -9,6 +9,7 @@ import { Logo } from "@/components/brand/Logo";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import type { NavCategory } from "./Navbar";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface MobileNavbarProps {
   open: boolean;
@@ -21,27 +22,27 @@ interface MobileNavbarProps {
   supportPhone: string;
 }
 
-/** Slide-in drawer for phones and tablets. Escape, the backdrop and every link close it. */
+/** Viewport-bound top menu. Native dialog focus handling keeps the background inert. */
 export function MobileNavbar({ open, onClose, storeName, logo, pathname, categories, chatUrl, supportPhone }: MobileNavbarProps) {
   const [categoriesOpen, setCategoriesOpen] = useState(pathname.startsWith("/categories"));
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useScrollLock(open);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      document.removeEventListener("keydown", onKey);
-    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) onClose(); };
+    closeOnDesktop();
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
   }, [open, onClose]);
-
-  if (!open) return null;
 
   const linkClass = (active: boolean) =>
     cn(
@@ -50,14 +51,20 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
     );
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu" id="mobile-menu">
-      <div className="absolute inset-0 animate-fade-in bg-brand-deep/45" onClick={onClose} aria-hidden="true" />
-      <div className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm animate-slide-in flex-col bg-white shadow-pop">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+    <dialog
+      ref={dialogRef}
+      aria-label="Menu"
+      id="mobile-menu"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClick={(event) => { if (event.target === dialogRef.current) onClose(); }}
+      className="mobile-menu fixed inset-x-0 top-0 bottom-auto m-0 h-fit max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
+    >
+      <div className="flex max-h-dvh min-w-0 flex-col rounded-b-2xl bg-white shadow-pop">
+        <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
           <Logo storeName={storeName} logo={logo} />
           <button
-            ref={closeRef}
             type="button"
+            autoFocus
             onClick={onClose}
             className="inline-flex size-10 items-center justify-center rounded-xl text-ink hover:bg-brand-50"
             aria-label="Close menu"
@@ -66,7 +73,7 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
           </button>
         </div>
 
-        <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-3 py-4">
+        <nav aria-label="Mobile" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
           <ul className="space-y-1">
             {siteConfig.mainNav.slice(0, 2).map((item) => {
               const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -99,12 +106,12 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
                           href={href}
                           onClick={onClose}
                           className={cn(
-                            "flex items-center justify-between rounded-lg px-3 py-2.5 text-[15px]",
+                            "flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-[15px]",
                             pathname === href ? "font-semibold text-brand" : "text-ink hover:bg-cream",
                           )}
                         >
-                          {category.name}
-                          <span className="text-xs text-muted">{category.count}</span>
+                          <span className="min-w-0">{category.name}</span>
+                          <span className="shrink-0 text-xs text-muted">{category.count}</span>
                         </Link>
                       </li>
                     );
@@ -130,7 +137,7 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
           </ul>
         </nav>
 
-        <div className="space-y-2 border-t border-line p-4">
+        <div className="shrink-0 space-y-2 border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {chatUrl && (
             <a
               href={chatUrl}
@@ -148,6 +155,6 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
           )}
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

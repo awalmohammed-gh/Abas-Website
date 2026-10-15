@@ -13,7 +13,7 @@ export async function quoteCart(req: Request, res: Response) {
 
 export async function createWhatsAppOrder(req: Request, res: Response) {
   res.setHeader("Cache-Control", "no-store");
-  const result = await orderService.createWhatsAppOrder(req.body as WhatsAppOrderInput);
+  const result = await orderService.createWhatsAppOrder(req.body as WhatsAppOrderInput, req.customerSession!);
   sendSuccess(res, result, result.replayed ? 200 : 201);
 }
 

@@ -19,7 +19,7 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
   const soldOut = !product.inStock;
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-card border border-line bg-white shadow-card transition-shadow hover:shadow-pop/40">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card transition-shadow hover:shadow-pop/40">
       <Link href={href} className="relative block aspect-square overflow-hidden bg-cream-200" tabIndex={-1} aria-hidden="true">
         <ProductImage
           src={product.images[0]?.url}
@@ -47,13 +47,13 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
           <PriceTag price={range.min} maxPrice={range.max} compareAtPrice={compareAtPrice} />
           <StockStatus stock={product.stock} />
         </div>
-        <div className="flex gap-2 pt-1">
+        <div className="flex flex-wrap gap-2 pt-1">
           {hasVariants ? (
-            <ButtonLink href={href} size="sm" className="flex-1" variant={soldOut ? "secondary" : "primary"} rightIcon={<FiArrowRight className="size-4" aria-hidden="true" />}>
+            <ButtonLink href={href} size="sm" className="min-w-24 flex-1" variant={soldOut ? "secondary" : "primary"} rightIcon={<FiArrowRight className="size-4" aria-hidden="true" />}>
               Options
             </ButtonLink>
           ) : (
-            <div className="flex-1">
+            <div className="min-w-24 max-w-full flex-1">
               <AddToCartButton
                 disabled={soldOut}
                 label={soldOut ? "Sold out" : "Add"}

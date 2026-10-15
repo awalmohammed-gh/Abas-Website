@@ -35,7 +35,7 @@ export function OverviewView() {
         <div className="space-y-6">
           <DashboardStats summary={data} />
 
-          <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <Panel
               title="Recent orders"
               actions={

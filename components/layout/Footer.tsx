@@ -28,10 +28,10 @@ export async function Footer() {
   const socials = SOCIAL.filter((s) => settings.socialLinks[s.key]);
 
   return (
-    <footer className="mt-20 bg-brand-deep text-cream/85">
-      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
+    <footer className="mt-20 min-w-0 shrink-0 bg-brand-deep text-cream/85">
+      <div className="container-page grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)]">
         <div className="space-y-4">
-          <Logo storeName={settings.storeName} tone="dark" showTagline />
+          <Logo storeName={settings.storeName} logo={settings.logo} tone="dark" showTagline />
           <p className="max-w-xs text-sm leading-relaxed text-cream/70">
             {settings.storeDescription || "Everyday essentials for your home, your family and you — ordered easily on WhatsApp."}
           </p>

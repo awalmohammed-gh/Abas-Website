@@ -82,13 +82,38 @@ The storefront only ever shows what is in the database. With no products it show
 
 ## How WhatsApp checkout works
 
-1. The cart lives in the browser (`localStorage`, validated on read). It holds only display snapshots.
-2. On the cart page the API re-prices the cart (`POST /api/orders/quote`) so customers see current prices and stock.
+1. Each guest receives an unpredictable HTTP-only cookie. MongoDB stores its SHA-256 hash, expiration, and that visit's cart (product IDs, optional variant IDs, and quantities). The browser does not store cart ownership secrets or authoritative prices in localStorage.
+2. `GET /api/cart` and the cart mutation endpoints return current database prices and stock. Additions and quantity changes validate inventory and use a revision check to preserve concurrent changes from other tabs. The stateless `POST /api/orders/quote` endpoint remains available for price checks.
 3. "Order via WhatsApp" collects name, phone, delivery or pickup, location and notes, validated in the browser and again on the server.
 4. `POST /api/orders/whatsapp` loads authoritative prices and stock, rejects unavailable or over-stock items, and saves a **WhatsApp Pending** order with a reference such as `ABA-000125`. It then builds the message and the `https://wa.me/<number>?text=<encoded>` click-to-chat link. No WhatsApp Business API, tokens or webhooks are involved.
 
-   The number comes from **Admin → Settings** (stored in MongoDB). `STORE_WHATSAPP_NUMBER` in `apps/api/.env` only sets the initial value (ABA Mart: `233278857814`, local `0278857814`). Nothing else in the code holds the number.
-5. The browser opens WhatsApp. Desktop opens a tab reserved during the click so pop-up blockers don't interfere. Phones hand off to the WhatsApp app. A success panel always offers **Open WhatsApp** and **Copy order message** as fallbacks.
+   The number comes from **Admin → Settings** (stored in MongoDB). `STORE_WHATSAPP_NUMBER` in `apps/api/.env` sets the initial value; otherwise first-time setup defaults to ABA Mart's `233278857814` (local `0278857814`). Existing saved settings remain authoritative.
+5. The browser saves the prepared request and attempts to open WhatsApp in a tab reserved during the click. A blocked or closed tab leaves the cart untouched. After initiating the handoff, the browser calls `POST /api/my-orders/:id/handoff`; a transaction removes only that order's quantities from this session's cart. Repeating the handoff does not clear newly added items again. **Open WhatsApp**, **Copy order message**, and private history offer retries using the existing order.
+
+### Private guest order history
+
+WhatsApp messages include each product's primary Cloudinary image URL from its saved order snapshot and an image-rich `/order-preview/<token>` link. Click-to-Chat shares these as text links; it cannot attach product photos automatically, and WhatsApp link previews are not guaranteed. Products without a usable image still appear in the order summary with a placeholder.
+
+Shared previews expose only the store name, order reference, product images, variants, quantities, prices, totals, and preparation/expiration dates. They omit customer names, phone numbers, addresses, notes, internal database IDs, and private order history. Preview links use a separate 256-bit token derived from a random per-order nonce and a purpose-specific HMAC; only the token hash is used for public lookup. Links expire after seven days. An owner's private history or checkout retry renews an expired link and invalidates the previous token. Responses disable caching and indexing and use `Referrer-Policy: no-referrer`.
+
+`STOREFRONT_URL` in the API environment controls the origin of preview links; it defaults to the first `CLIENT_ORIGIN`. Set it to the public HTTPS storefront origin in production. `GET /api/orders/preview/:token` validates the token on the server and returns the restricted product summary (404 for invalid links, 410 for expired links). No new database or Cloudinary connection, duplicate image upload, WhatsApp Business API, or messaging provider is used.
+
+`/my-orders` lists only orders owned by the HTTP-only guest cookie. Both list and detail endpoints enforce ownership on the API, return `private, no-store`, and exclude internal admin history. Phone numbers and order references cannot authorize access. Orders prepared before guest ownership was introduced remain available to admins; they are not assigned to visitors by matching names or phone numbers.
+
+Guest cookies expire after 30 days. Cookie removal starts a new empty visit. Carts in the old localStorage format are not automatically attached to a new session because their ownership cannot be verified. No Google sign-in, customer account, or password is required or implemented.
+
+The **Guest privacy & recovery** panel can start a fresh visit on a shared browser. This revokes the previous cookie and hides its cart and orders. An optional private recovery code can restore an earlier visit without merging it into the current one. Codes are generated from 32 random bytes, stored only as hashes, expire after 180 days, and are consumed when used. Recovery rotates the cookie and CSRF token and invalidates previous browser access. Creating a new code revokes the previous code; keep it private, since possession grants access to that visit.
+
+Guest API endpoints:
+
+- `GET /api/customer/session`: create or resume a guest session and return its in-memory CSRF token.
+- `POST /api/customer/session/reset`: start a fresh visit and revoke the old cookie.
+- `POST /api/customer/recovery-token`, `POST /api/customer/recover`: issue or redeem an optional private recovery code.
+- `GET /api/cart`, `POST /api/cart/items`, `PUT /api/cart`, `PATCH /api/cart/items/:id`, `DELETE /api/cart/items/:id`, `DELETE /api/cart`: mutate only the cookie owner's cart. Item IDs are `productId:variantId` or `productId:base`.
+- `GET /api/my-orders`, `GET /api/my-orders/:id`: private, paginated order history and order details.
+- `POST /api/my-orders/:id/handoff`: idempotently record initiation and clear the ordered quantities. It never confirms, pays, or completes an order.
+
+All guest mutations require the current session's `X-CSRF-Token`. The browser uses the existing CORS allowlist and credentials mode. Host-only guest cookies use `Secure` in production and the configured SameSite policy; keep frontend and API cookie settings appropriate to their deployed domains. Session and CSRF handling follows the [OWASP session-management guidance](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) and [CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Safeguards:
 - **Duplicate submissions**: every checkout carries an idempotency key, so a retry returns the same order.

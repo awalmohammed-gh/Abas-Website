@@ -20,7 +20,7 @@ export function ProductGrid({
   return (
     <ul className={cn(GRID, className)}>
       {products.map((product, index) => (
-        <li key={product.id}>
+        <li key={product.id} className="min-w-0">
           <ProductCard product={product} priority={index < priorityCount} />
         </li>
       ))}

@@ -101,7 +101,7 @@ export function BannerForm({
             {formError}
           </p>
         )}
-        <div className="grid gap-4 sm:grid-cols-[1.6fr_1fr]">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <SingleImageUploader
             label="Desktop image"
             required

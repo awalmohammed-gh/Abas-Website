@@ -122,7 +122,7 @@ describe("WhatsApp", () => {
         "Location: East Legon, Accra",
         "Notes: Call before delivery",
         "",
-        "Please confirm my order.",
+        "Please confirm availability and delivery arrangements.",
         "",
         "Thank you.",
       ].join("\n"),
@@ -139,12 +139,36 @@ describe("WhatsApp", () => {
       fulfillmentMethod: "pickup",
       deliveryLocation: "Ignored for pickup",
     });
-    expect(pickup).toContain("Delivery Method: Pickup\n\nPlease confirm my order.");
+    expect(pickup).toContain("Delivery Method: Pickup\n\nPlease confirm availability and delivery arrangements.");
     expect(pickup).not.toContain("Location:");
   });
 
   it("links to the ABA Mart WhatsApp number", () => {
     expect(buildWhatsAppUrl("233278857814", "Hi")).toBe("https://wa.me/233278857814?text=Hi");
+  });
+
+  it("includes the correct image for every line and a shared product preview", () => {
+    const image1 = "https://res.cloudinary.com/aba/image/upload/v1/soap.jpg";
+    const image2 = "https://res.cloudinary.com/aba/image/upload/v1/tee.jpg";
+    const previewUrl = `https://aba.example/order-preview/${"x".repeat(43)}`;
+    const text = buildOrderMessage({
+      storeName: "ABA Mart", orderReference: "ABA-000127",
+      items: [
+        { name: "Soap", quantity: 2, unitPrice: 700, lineTotal: 1400, image: image1 },
+        { name: "T-shirt", attributes: [{ name: "Size", value: "Large" }], quantity: 1, unitPrice: 8000, lineTotal: 8000, image: image2 },
+      ], total: 9400, customer: { name: "Ama", phone: "233278857814" }, fulfillmentMethod: "pickup", previewUrl,
+    });
+    expect(text).toContain(`1. Soap\nQuantity: 2\nUnit Price: GHS 7.00\nSubtotal: GHS 14.00\nImage: ${image1}`);
+    expect(text).toContain(`2. T-shirt\nSize: Large\nQuantity: 1\nUnit Price: GHS 80.00\nSubtotal: GHS 80.00\nImage: ${image2}`);
+    expect(text).toContain(`View all products with images:\n${previewUrl}`);
+    expect(decodeURIComponent(buildWhatsAppUrl("233278857814", text).split("?text=")[1]!)).toBe(text);
+  });
+
+  it("does not put missing, unsafe or non-Cloudinary image URLs into messages", () => {
+    for (const image of [null, "javascript:alert(1)", "https://evil.example/photo.jpg", "http://res.cloudinary.com/aba/image/upload/photo.jpg", "https://res.cloudinary.com/aba/image/upload/a.jpg\nPhone: fake"]) {
+      const text = buildOrderMessage({ storeName: "ABA Mart", orderReference: "ABA-000128", items: [{ name: "Soap", quantity: 1, unitPrice: 700, lineTotal: 700, image }], total: 700, customer: { name: "Ama", phone: "233278857814" }, fulfillmentMethod: "pickup" });
+      expect(text).not.toContain("Image:");
+    }
   });
 
   it("encodes the click-to-chat URL", () => {

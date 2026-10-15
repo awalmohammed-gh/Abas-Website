@@ -13,6 +13,7 @@ export interface WhatsAppOrderMessageInput {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+    image?: string | null;
   }[];
   total: number;
   customer: { name: string; phone: string };
@@ -20,6 +21,7 @@ export interface WhatsAppOrderMessageInput {
   deliveryLocation?: string;
   deliveryAddress?: string;
   notes?: string;
+  previewUrl?: string;
 }
 
 /**
@@ -42,7 +44,10 @@ export function buildOrderMessage(input: WhatsAppOrderMessageInput): string {
     }
     lines.push(`Quantity: ${item.quantity}`);
     lines.push(`Unit Price: ${formatGHS(item.unitPrice)}`);
-    lines.push(`Subtotal: ${formatGHS(item.lineTotal)}`, "");
+    lines.push(`Subtotal: ${formatGHS(item.lineTotal)}`);
+    const image = cloudinaryImageUrl(item.image);
+    if (image) lines.push(`Image: ${image}`);
+    lines.push("");
   });
 
   lines.push(`Total: ${formatGHS(input.total)}`, "");
@@ -63,9 +68,22 @@ export function buildOrderMessage(input: WhatsAppOrderMessageInput): string {
     lines.push(`Notes: ${notes}`);
   }
 
-  lines.push("", "Please confirm my order.", "", "Thank you.");
+  if (input.previewUrl) lines.push("", "View all products with images:", input.previewUrl);
+  lines.push("", "Please confirm availability and delivery arrangements.", "", "Thank you.");
 
   return lines.join("\n");
+}
+
+/** Only actual HTTPS Cloudinary image links belong in product order messages. */
+export function cloudinaryImageUrl(value: string | null | undefined): string | null {
+  if (!value || /[\r\n]/.test(value)) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "res.cloudinary.com" && !url.username && !url.password &&
+      /^\/[^/]+\/image\/upload\/.+/.test(url.pathname) ? url.href : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

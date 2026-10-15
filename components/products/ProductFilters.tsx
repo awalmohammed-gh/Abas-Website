@@ -55,7 +55,7 @@ export function ProductFilters({ basePath, values, categories, total }: ProductF
 
   return (
     <div className="space-y-3 rounded-2xl border border-line bg-white p-3 sm:p-4">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+      <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,200px)_minmax(0,170px)] md:items-center">
         <div className="relative">
           <label htmlFor="product-search" className="sr-only">
             Search products

@@ -142,7 +142,7 @@ export function OrderDetails({ order, storeName, onClose, onUpdated }: OrderDeta
         {options.length > 0 ? (
           <section className="space-y-3 rounded-xl border border-line p-4" aria-label="Update status">
             <p className="text-sm font-semibold text-ink">Update status</p>
-            <div className="grid gap-2 sm:grid-cols-[200px_1fr]">
+            <div className="grid gap-2 sm:grid-cols-[200px_minmax(0,1fr)]">
               <select
                 aria-label="New status"
                 value={next}

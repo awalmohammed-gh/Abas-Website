@@ -9,7 +9,7 @@ import { revalidateStorefront } from "./revalidationService.js";
 export async function getSettingsDoc(): Promise<SettingsDoc> {
   const settings = await Settings.findOneAndUpdate(
     { key: SETTINGS_KEY },
-    { $setOnInsert: { key: SETTINGS_KEY, whatsappNumber: env.STORE_WHATSAPP_NUMBER ?? "" } },
+    { $setOnInsert: { key: SETTINGS_KEY, whatsappNumber: env.STORE_WHATSAPP_NUMBER ?? "233278857814" } },
     { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
   ).lean<SettingsDoc>();
   if (!settings) throw new Error("Store settings could not be loaded");

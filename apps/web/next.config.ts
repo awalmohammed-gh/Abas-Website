@@ -11,6 +11,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The dev server only serves its scripts to localhost; any other host gets a page
+  // that never hydrates (stuck spinners). Add LAN addresses for phone testing with
+  // ALLOWED_DEV_ORIGINS, and add the same origins to the API's CLIENT_ORIGIN.
+  allowedDevOrigins: [
+    "127.0.0.1",
+    ...(process.env.ALLOWED_DEV_ORIGINS ?? "").split(",").map((host) => host.trim()).filter(Boolean),
+  ],
   experimental: {
     agentFeedback: true,
   },
@@ -32,6 +39,11 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       { source: "/admin", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/order-preview/:path*", headers: [
+        { key: "Referrer-Policy", value: "no-referrer" },
+        { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        { key: "Cache-Control", value: "private, no-store" },
+      ] },
     ];
   },
   turbopack: {

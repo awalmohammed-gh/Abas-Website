@@ -14,7 +14,7 @@ export async function Promotions() {
   return (
     <section className="container-page py-14 sm:py-16" aria-labelledby="deals-heading">
       <div className="overflow-hidden rounded-3xl bg-accent-50 ring-1 ring-accent/30">
-        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[1fr_1.6fr] lg:items-center">
+        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Deals</p>
             <h2 id="deals-heading" className="mt-2 text-3xl font-bold text-ink sm:text-4xl">

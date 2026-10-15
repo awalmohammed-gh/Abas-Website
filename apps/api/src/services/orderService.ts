@@ -10,6 +10,7 @@ import {
   resolvePrice,
   variantLabel,
   type CartQuote,
+  type CustomerOrderDTO,
   type DashboardSummary,
   type OrderDTO,
   type OrderStatus,
@@ -21,12 +22,16 @@ import {
 import { nextSequence } from "../models/Counter.js";
 import { Order, type OrderDoc, type OrderItemDoc } from "../models/Order.js";
 import { Product, type ProductVariantDoc } from "../models/Product.js";
+import { CustomerSession, type CustomerSessionDoc } from "../models/CustomerSession.js";
+import type { SettingsDoc } from "../models/Settings.js";
+import { activeGuestFilter } from "./customerSessionService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toOrderDTO, type ProductLean } from "../utils/serialize.js";
 import type { AdminOrderQuery } from "../validators/orderSchema.js";
 import { inventoryRows, publicVisibilityFilter } from "./productService.js";
 import { revalidateStorefront } from "./revalidationService.js";
 import { getSettingsDoc } from "./settingsService.js";
+import { ensureOrderPreview, newOrderPreview, orderPreviewUrl } from "./orderPreviewService.js";
 
 interface CartLineInput {
   productId: string;
@@ -112,7 +117,7 @@ export async function quoteCart(items: CartLineInput[]): Promise<CartQuote> {
       compareAtPrice,
       lineTotal: price * quantity,
       status: quantity < line.quantity ? "quantity_adjusted" : "ok",
-      message: quantity < line.quantity ? `Only ${available} available. Quantity updated.` : null,
+      message: quantity < line.quantity ? `Only ${available} available. Reduce the quantity to continue.` : null,
     };
   });
 
@@ -142,6 +147,7 @@ export function formatOrderReference(sequence: number): string {
 
 function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string, replayed: boolean): WhatsAppOrderResult {
   const dto = toOrderDTO(order);
+  const previewUrl = orderPreviewUrl(order);
   const message = buildOrderMessage({
     storeName,
     orderReference: order.orderReference,
@@ -152,9 +158,11 @@ function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string,
     deliveryLocation: order.deliveryLocation,
     deliveryAddress: order.deliveryAddress,
     notes: order.notes,
+    previewUrl,
   });
   return {
     order: {
+      id: dto.id,
       orderReference: dto.orderReference,
       status: dto.status,
       items: dto.items,
@@ -165,6 +173,7 @@ function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string,
     message,
     whatsappUrl: buildWhatsAppUrl(whatsappNumber, message),
     replayed,
+    previewUrl,
   };
 }
 
@@ -172,7 +181,7 @@ function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string,
  * Records a "WhatsApp Pending" order from a validated cart and returns the
  * click-to-chat link. Stock is not touched: opening WhatsApp is not a sale.
  */
-export async function createWhatsAppOrder(input: WhatsAppOrderInput): Promise<WhatsAppOrderResult> {
+export async function createWhatsAppOrder(input: WhatsAppOrderInput, guest: CustomerSessionDoc): Promise<WhatsAppOrderResult> {
   const settings = await getSettingsDoc();
   if (!settings.whatsappNumber) {
     throw new ApiError(503, "WHATSAPP_NOT_CONFIGURED", "WhatsApp ordering is not available yet. Please contact the store directly.");
@@ -181,10 +190,18 @@ export async function createWhatsAppOrder(input: WhatsAppOrderInput): Promise<Wh
   const hash = requestHash(input);
   const existing = await Order.findOne({ idempotencyKey: input.idempotencyKey }).lean<OrderDoc>();
   if (existing) {
-    if (existing.requestHash !== hash) {
+    if (!existing.guestSession?.equals(guest._id) || existing.requestHash !== hash) {
       throw ApiError.conflict("This checkout was already used for a different order. Please try again.", "IDEMPOTENCY_CONFLICT");
     }
-    return buildResult(existing, settings.storeName, settings.whatsappNumber, true);
+    return buildResult(await ensureOrderPreview(existing), settings.storeName, settings.whatsappNumber, true);
+  }
+
+  const current = await CustomerSession.findOne(activeGuestFilter(guest)).lean<CustomerSessionDoc>();
+  if (!current) throw ApiError.unauthorized("Your guest session has ended.", "GUEST_SESSION_EXPIRED");
+  const signature = (items: CartLineInput[]) => JSON.stringify(mergeLines(items).sort((a, b) =>
+    `${a.productId}:${a.variantId}`.localeCompare(`${b.productId}:${b.variantId}`)));
+  if (signature(input.items) !== signature(current.cart)) {
+    throw ApiError.conflict("Your cart changed. Review it before preparing your order.", "CART_CHANGED", { quote: await quoteCart(current.cart) });
   }
 
   const quote = await quoteCart(input.items);
@@ -213,30 +230,108 @@ export async function createWhatsAppOrder(input: WhatsAppOrderInput): Promise<Wh
 
   const now = new Date();
   try {
-    const order = await Order.create({
-      orderReference: formatOrderReference(await nextSequence("orderReference")),
-      idempotencyKey: input.idempotencyKey,
-      requestHash: hash,
-      customer: { name: input.customer.name, phone: input.customer.phone },
-      items,
-      subtotal: quote.subtotal,
-      total: quote.total,
-      fulfillmentMethod: input.customer.fulfillmentMethod,
-      deliveryLocation: input.customer.fulfillmentMethod === "delivery" ? input.customer.deliveryLocation : "",
-      deliveryAddress: input.customer.fulfillmentMethod === "delivery" ? input.customer.deliveryAddress : "",
-      notes: input.customer.notes,
-      status: "WhatsApp Pending",
-      statusHistory: [{ status: "WhatsApp Pending", note: "Order prepared on the website and sent to WhatsApp", changedAt: now, changedBy: null }],
+    const order = await mongoose.connection.transaction(async (transaction) => {
+      const locked = await CustomerSession.updateOne(
+        { ...activeGuestFilter(guest), cartRevision: current.cartRevision },
+        { $inc: { cartRevision: 1 }, $set: { lastActiveAt: now } },
+        { session: transaction },
+      );
+      if (!locked.matchedCount) throw ApiError.conflict("Your cart changed. Review it before trying again.", "CART_CHANGED");
+      const reference = formatOrderReference(await nextSequence("orderReference"));
+      const [created] = await Order.create([{
+        orderReference: reference,
+        ...newOrderPreview(reference),
+        idempotencyKey: input.idempotencyKey,
+        requestHash: hash,
+        guestSession: guest._id,
+        checkoutHandoffStatus: "prepared",
+        customer: { name: input.customer.name, phone: input.customer.phone },
+        items,
+        subtotal: quote.subtotal,
+        total: quote.total,
+        fulfillmentMethod: input.customer.fulfillmentMethod,
+        deliveryLocation: input.customer.fulfillmentMethod === "delivery" ? input.customer.deliveryLocation : "",
+        deliveryAddress: input.customer.fulfillmentMethod === "delivery" ? input.customer.deliveryAddress : "",
+        notes: input.customer.notes,
+        status: "WhatsApp Pending",
+        statusHistory: [{ status: "WhatsApp Pending", note: "Order request prepared on the website; awaiting the customer's WhatsApp message", changedAt: now, changedBy: null }],
+      }], { session: transaction });
+      return created!;
     });
     return buildResult(order.toObject(), settings.storeName, settings.whatsappNumber, false);
   } catch (error) {
     // A concurrent duplicate submission won the race: return the recorded order.
-    if ((error as { code?: number }).code === 11000) {
+    if ((error as { code?: number }).code === 11000 || (error instanceof ApiError && error.code === "CART_CHANGED")) {
       const winner = await Order.findOne({ idempotencyKey: input.idempotencyKey }).lean<OrderDoc>();
-      if (winner && winner.requestHash === hash) return buildResult(winner, settings.storeName, settings.whatsappNumber, true);
+      if (winner?.guestSession?.equals(guest._id) && winner.requestHash === hash) return buildResult(await ensureOrderPreview(winner), settings.storeName, settings.whatsappNumber, true);
     }
     throw error;
   }
+}
+
+function toCustomerOrder(order: OrderDoc, settings: SettingsDoc): CustomerOrderDTO {
+  const dto = toOrderDTO(order);
+  return {
+    id: dto.id,
+    orderReference: dto.orderReference,
+    customer: dto.customer,
+    items: dto.items,
+    itemCount: dto.itemCount,
+    subtotal: dto.subtotal,
+    total: dto.total,
+    fulfillmentMethod: dto.fulfillmentMethod,
+    deliveryLocation: dto.deliveryLocation,
+    deliveryAddress: dto.deliveryAddress,
+    notes: dto.notes,
+    status: dto.status,
+    createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt,
+    previewUrl: orderPreviewUrl(order),
+    checkoutHandoffStatus: order.checkoutHandoffStatus ?? "prepared",
+    whatsappUrl: order.status === "WhatsApp Pending" && settings.whatsappNumber
+      ? buildResult(order, settings.storeName, settings.whatsappNumber, true).whatsappUrl : null,
+    contactUrl: settings.whatsappNumber
+      ? buildWhatsAppUrl(settings.whatsappNumber, `Hello ${settings.storeName}, I'd like help with order ${order.orderReference}.`) : null,
+  };
+}
+
+export async function listCustomerOrders(guest: CustomerSessionDoc, page: number): Promise<Paginated<CustomerOrderDTO>> {
+  const filter = { guestSession: guest._id };
+  const limit = 12;
+  const [orders, total, settings] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean<OrderDoc[]>(),
+    Order.countDocuments(filter),
+    getSettingsDoc(),
+  ]);
+  const previews = await Promise.all(orders.map(ensureOrderPreview));
+  return { items: previews.map((order) => toCustomerOrder(order, settings)), total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
+}
+
+export async function getCustomerOrder(guest: CustomerSessionDoc, id: string): Promise<CustomerOrderDTO> {
+  const order = await Order.findOne({ _id: id, guestSession: guest._id }).lean<OrderDoc>();
+  if (!order) throw ApiError.notFound("Order not found.");
+  return toCustomerOrder(await ensureOrderPreview(order), await getSettingsDoc());
+}
+
+/** Clears only the ordered quantities, once, after the browser initiates WhatsApp. */
+export async function recordHandoff(guest: CustomerSessionDoc, id: string): Promise<void> {
+  await mongoose.connection.transaction(async (transaction) => {
+    const session = await CustomerSession.findOne(activeGuestFilter(guest)).session(transaction);
+    if (!session) throw ApiError.unauthorized("Your guest session has ended.", "GUEST_SESSION_EXPIRED");
+    const order = await Order.findOne({ _id: id, guestSession: guest._id }).session(transaction);
+    if (!order) throw ApiError.notFound("Order not found.");
+    if (order.checkoutHandoffStatus === "initiated") return;
+    if (order.status !== "WhatsApp Pending") throw ApiError.conflict("This order is no longer awaiting a WhatsApp handoff.", "ORDER_NOT_PENDING");
+    const ordered = new Map(order.items.map((item) => [`${item.product}:${item.variantId ?? "base"}`, item.quantity]));
+    session.cart = session.cart.map((item) => ({
+      productId: item.productId, variantId: item.variantId,
+      quantity: Math.max(0, item.quantity - (ordered.get(`${item.productId}:${item.variantId ?? "base"}`) ?? 0)),
+    })).filter((item) => item.quantity > 0);
+    session.cartRevision += 1;
+    await session.save({ session: transaction });
+    order.checkoutHandoffStatus = "initiated";
+    await order.save({ session: transaction });
+  });
 }
 
 /* -------------------------------------------------------- Admin: listing */

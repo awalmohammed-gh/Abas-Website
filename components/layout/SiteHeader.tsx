@@ -25,8 +25,8 @@ export async function SiteHeader() {
 export function SiteHeaderSkeleton() {
   return (
     <div className="sticky top-0 z-40 border-b border-line bg-white/95">
-      <div className="container-page flex h-16 items-center justify-between lg:h-[72px]">
-        <div className="skeleton h-9 w-36" />
+      <div className="container-page flex min-h-[76px] items-center justify-between py-3 lg:min-h-[88px] lg:py-4">
+        <div className="skeleton h-12 w-[72px] lg:h-14 lg:w-[84px]" />
         <div className="hidden gap-6 lg:flex">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="skeleton h-4 w-14" />

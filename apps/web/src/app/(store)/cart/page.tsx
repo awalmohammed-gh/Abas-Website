@@ -23,7 +23,7 @@ export default function CartPage() {
       </header>
       <Suspense
         fallback={
-          <div className="grid gap-8 lg:grid-cols-[1fr_380px]" aria-hidden="true">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]" aria-hidden="true">
             <div className="skeleton h-64" />
             <div className="skeleton h-72" />
           </div>

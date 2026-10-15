@@ -73,3 +73,21 @@ export function ownedImage(name = "photo") {
     publicId: `aba-mart/products/${name}`,
   };
 }
+
+/** A separate cookie jar represents another device or browser profile. */
+export async function guestVisitor(app: Express) {
+  const agent = request.agent(app);
+  const session = await agent.get("/api/customer/session").set("Origin", ORIGIN).expect(200);
+  let csrf = session.body.data.csrfToken as string;
+  const withGuest = (test: request.Test) => test.set("Origin", ORIGIN).set("X-CSRF-Token", csrf);
+  return {
+    agent,
+    csrf,
+    setCsrf: (value: string) => { csrf = value; },
+    get: (path: string) => withGuest(agent.get(path)),
+    post: (path: string, body: object = {}) => withGuest(agent.post(path)).send(body),
+    put: (path: string, body: object = {}) => withGuest(agent.put(path)).send(body),
+    patch: (path: string, body: object = {}) => withGuest(agent.patch(path)).send(body),
+    del: (path: string) => withGuest(agent.delete(path)),
+  };
+}

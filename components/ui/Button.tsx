@@ -17,15 +17,15 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm gap-1.5 rounded-lg",
-  md: "h-11 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-12 px-6 text-base gap-2 rounded-xl",
+  sm: "min-h-9 px-3 py-2 text-sm gap-1.5 rounded-lg",
+  md: "min-h-11 px-4 py-2.5 text-sm gap-2 rounded-xl",
+  lg: "min-h-12 px-6 py-2.5 text-base gap-2 rounded-xl",
   icon: "size-10 rounded-xl",
 };
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center font-semibold transition-colors duration-150",
+    "inline-flex min-w-0 max-w-full shrink-0 items-center justify-center whitespace-normal text-center [overflow-wrap:anywhere] font-semibold transition-colors duration-150 [&>svg]:shrink-0",
     "disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55",
     variants[variant],
     variant === "link" ? "h-auto text-sm" : sizes[size],

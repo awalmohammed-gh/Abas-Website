@@ -52,8 +52,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             ) : (
               <FiCheckCircle className="mt-0.5 size-5 shrink-0 text-success" aria-hidden="true" />
             )}
-            <p className="flex-1 text-ink">{toast.message}</p>
-            <button type="button" onClick={() => dismiss(toast.id)} className="text-muted hover:text-ink" aria-label="Dismiss">
+            <p className="min-w-0 flex-1 text-ink">{toast.message}</p>
+            <button type="button" onClick={() => dismiss(toast.id)} className="shrink-0 text-muted hover:text-ink" aria-label="Dismiss">
               <FiX className="size-4" />
             </button>
           </div>

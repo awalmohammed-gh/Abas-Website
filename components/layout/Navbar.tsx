@@ -43,7 +43,7 @@ export function SearchForm({ onSubmitted, autoFocus, className }: { onSubmitted?
   }
 
   return (
-    <form role="search" onSubmit={submit} className={cn("relative", className)}>
+    <form role="search" onSubmit={submit} className={cn("relative min-w-0", className)}>
       <label htmlFor={autoFocus ? "mobile-search" : "desktop-search"} className="sr-only">
         Search products
       </label>
@@ -55,7 +55,7 @@ export function SearchForm({ onSubmitted, autoFocus, className }: { onSubmitted?
         placeholder="Search soaps, shirts, body wash…"
         autoFocus={autoFocus}
         maxLength={100}
-        className="h-11 w-full rounded-full border border-line bg-cream pl-11 pr-4 text-sm text-ink placeholder:text-muted/80 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15"
+        className="h-11 w-full rounded-full border border-line bg-cream pl-11 pr-4 text-base text-ink placeholder:text-muted/80 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15 md:text-sm"
       />
       <FiSearch className="pointer-events-none absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted" aria-hidden="true" />
     </form>
@@ -102,16 +102,16 @@ function CategoriesMenu({ categories, active }: { categories: NavCategory[]; act
           {categories.length === 0 ? (
             <p className="px-3 py-4 text-sm text-muted">Categories will appear here once products are added.</p>
           ) : (
-            <ul className="max-h-[60vh] overflow-y-auto">
+            <ul className="max-h-[60dvh] overflow-y-auto overscroll-contain">
               {categories.map((category) => (
                 <li key={category.slug}>
                   <Link
                     href={`/categories/${category.slug}`}
                     onClick={() => setOpen(false)}
-                    className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-ink hover:bg-brand-50 hover:text-brand"
+                    className="flex min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm text-ink hover:bg-brand-50 hover:text-brand"
                   >
-                    <span className="font-medium">{category.name}</span>
-                    <span className="text-xs text-muted">{category.count}</span>
+                    <span className="min-w-0 font-medium">{category.name}</span>
+                    <span className="shrink-0 text-xs text-muted">{category.count}</span>
                   </Link>
                 </li>
               ))}
@@ -139,10 +139,10 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
-      <div className="container-page flex h-16 items-center gap-3 lg:h-[72px] lg:gap-6">
+      <div className="container-page flex min-h-[76px] items-center gap-3 py-3 lg:min-h-[88px] lg:gap-6 lg:py-4">
         <button
           type="button"
-          className="-ml-2 inline-flex size-10 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
+          className="-ml-2 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
           onClick={() => setMenuOpen(true)}
           aria-label="Open menu"
           aria-expanded={menuOpen}
@@ -151,11 +151,11 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
           <FiMenu className="size-6" />
         </button>
 
-        <Link href="/" className="shrink-0" aria-label={`${storeName} home`}>
-          <Logo storeName={storeName} logo={logo} className="max-[359px]:[&_svg]:size-8" />
+        <Link href="/" className="min-w-0 shrink" aria-label={`${storeName} home`}>
+          <Logo storeName={storeName} logo={logo} />
         </Link>
 
-        <nav aria-label="Main" className="ml-2 hidden items-center lg:flex">
+        <nav aria-label="Main" className="ml-2 hidden shrink-0 items-center lg:flex">
           {siteConfig.mainNav.slice(0, 2).map((item) => (
             <Link
               key={item.href}
@@ -187,7 +187,7 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
 
         <SearchForm className="ml-auto hidden w-full max-w-xs md:block xl:max-w-sm" />
 
-        <div className="ml-auto flex items-center gap-1 md:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
           <button
             type="button"
             onClick={() => setSearchOpen((v) => !v)}

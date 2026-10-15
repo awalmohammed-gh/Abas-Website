@@ -1,0 +1,68 @@
+import type { HeroBanner } from "@/components/home/HeroCarousel";
+
+export const heroBanners: HeroBanner[] = [
+  {
+    id: "graphic-tees",
+    eyebrow: "Wear your personality",
+    title: "A little print. A lot of personality.",
+    description: "Express yourself with graphic tees in white, lilac and warm beige. Find a print that feels like you.",
+    desktopImage: {
+      url: "/images/hero/graphic-tees.jpg",
+      alt: "White, lilac and beige graphic T-shirts hanging on a rail",
+      publicId: "hero/graphic-tees",
+      width: 735,
+      height: 490,
+    },
+    mobileImage: null,
+    buttonText: "Shop T-shirts",
+    buttonLink: "/categories/t-shirts-and-tops",
+  },
+  {
+    id: "plain-tees",
+    eyebrow: "Everyday wardrobe essentials",
+    title: "Simple tees. Endless possibilities.",
+    description: "Keep it classic with plain T-shirts in white, grey and black. Easy to pair, easy to make your own.",
+    desktopImage: {
+      url: "/images/hero/plain-tees.jpg",
+      alt: "Plain white, grey and black T-shirts on a clothing rack",
+      publicId: "hero/plain-tees",
+      width: 735,
+      height: 490,
+    },
+    mobileImage: null,
+    buttonText: "Explore everyday tees",
+    buttonLink: "/categories/t-shirts-and-tops",
+  },
+  {
+    id: "liquid-soap-large",
+    eyebrow: "Aba’s home essentials · GH₵20",
+    title: "A fresh clean, in a bigger bottle.",
+    description: "Aba’s multi-purpose liquid soap in the large handled bottle. A fresh addition to your everyday cleaning routine for GH₵20.",
+    desktopImage: {
+      url: "/images/hero/liquid-soap-large.png",
+      alt: "Large yellow handled bottle of Aba’s multi-purpose liquid soap, advertised at GH₵20",
+      publicId: "hero/liquid-soap-large",
+      width: 1672,
+      height: 941,
+    },
+    mobileImage: null,
+    buttonText: "Shop liquid soap",
+    buttonLink: "/shop?q=liquid%20soap",
+  },
+  {
+    id: "liquid-soap-small",
+    eyebrow: "Aba’s home essentials · GH₵7",
+    title: "Everyday freshness. Just GH₵7.",
+    description: "Pick up the small bottle of Aba’s multi-purpose liquid soap. A handy choice for everyday cleaning at GH₵7.",
+    desktopImage: {
+      url: "/images/hero/liquid-soap-small.png",
+      alt: "Small yellow bottle of Aba’s multi-purpose liquid soap, advertised at GH₵7",
+      publicId: "hero/liquid-soap-small",
+      width: 1672,
+      height: 941,
+    },
+    mobileImage: null,
+    buttonText: "Shop liquid soap",
+    buttonLink: "/shop?q=liquid%20soap",
+  },
+];

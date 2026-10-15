@@ -266,7 +266,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
   const savings = discountValue !== null && regularValue !== null && regularValue > discountValue ? Math.floor(((regularValue - discountValue) * 100) / regularValue) : null;
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[1fr_340px]">
+    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-6">
         <Panel title="Details">
           <div className="space-y-4 p-4 sm:p-5">
@@ -351,7 +351,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
               <div className="space-y-5">
                 <div className="space-y-3">
                   {form.options.map((option, index) => (
-                    <div key={option.key} className="grid gap-2 rounded-xl border border-line bg-cream/50 p-3 sm:grid-cols-[180px_1fr_auto] sm:items-start">
+                    <div key={option.key} className="grid gap-2 rounded-xl border border-line bg-cream/50 p-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-start">
                       <Input
                         label={index === 0 ? "Option name" : undefined}
                         aria-label="Option name"
@@ -399,7 +399,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
                 {form.variants.length > 0 && (
                   <div className="overflow-hidden rounded-xl border border-line">
-                    <div className="hidden grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] gap-3 bg-cream/70 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted md:grid">
+                    <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-3 bg-cream/70 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted md:grid">
                       <span>Variant</span>
                       <span>SKU</span>
                       <span>Price override</span>
@@ -408,7 +408,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     </div>
                     <ul className="divide-y divide-line">
                       {form.variants.map((variant, i) => (
-                        <li key={variant.key} className="grid grid-cols-2 gap-3 p-3 md:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] md:items-center">
+                        <li key={variant.key} className="grid grid-cols-2 gap-3 p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] md:items-center">
                           <p className="col-span-2 text-sm font-semibold text-ink md:col-span-1">{variantLabel(variant.attributes)}</p>
                           <input
                             aria-label={`SKU for ${variantLabel(variant.attributes)}`}

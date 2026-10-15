@@ -33,6 +33,11 @@ export interface OrderDoc {
   orderReference: string;
   idempotencyKey: string;
   requestHash: string;
+  guestSession: Types.ObjectId | null;
+  checkoutHandoffStatus: "prepared" | "initiated";
+  previewNonce: string | null;
+  previewTokenHash: string | null;
+  previewExpiresAt: Date | null;
   source: "whatsapp";
   customer: { name: string; phone: string };
   items: OrderItemDoc[];
@@ -85,6 +90,11 @@ const orderSchema = new Schema<OrderDoc>(
     orderReference: { type: String, required: true },
     idempotencyKey: { type: String, required: true },
     requestHash: { type: String, required: true },
+    guestSession: { type: Schema.Types.ObjectId, ref: "CustomerSession", default: null },
+    checkoutHandoffStatus: { type: String, enum: ["prepared", "initiated"], default: "prepared" },
+    previewNonce: { type: String, default: null, select: true },
+    previewTokenHash: { type: String, default: null },
+    previewExpiresAt: { type: Date, default: null },
     source: { type: String, enum: ["whatsapp"], default: "whatsapp" },
     customer: {
       name: { type: String, required: true, trim: true, maxlength: 80 },
@@ -113,6 +123,8 @@ orderSchema.index({ orderReference: 1 }, { unique: true });
 orderSchema.index({ idempotencyKey: 1 }, { unique: true });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ guestSession: 1, createdAt: -1 });
+orderSchema.index({ previewTokenHash: 1 }, { unique: true, partialFilterExpression: { previewTokenHash: { $type: "string" } } });
 orderSchema.index({ "customer.phone": 1 });
 
 export const Order = model<OrderDoc>("Order", orderSchema);

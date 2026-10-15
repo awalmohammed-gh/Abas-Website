@@ -11,7 +11,7 @@ export function OrderTable({ orders, onOpen }: { orders: OrderDTO[]; onOpen: (or
         {orders.map((order) => (
           <li key={order.id}>
             <button type="button" onClick={() => onOpen(order)} className="w-full space-y-2 p-4 text-left hover:bg-cream/60">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold text-ink">{order.orderReference}</span>
                 <OrderStatusBadge status={order.status} />
               </div>
@@ -27,7 +27,7 @@ export function OrderTable({ orders, onOpen }: { orders: OrderDTO[]; onOpen: (or
         ))}
       </ul>
 
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain md:block" role="region" aria-label="Orders table" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-cream/60 text-xs uppercase tracking-wider text-muted">
             <tr>

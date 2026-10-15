@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { FiX } from "react-icons/fi";
 import { cn } from "@/lib/utils";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface ModalProps {
   open: boolean;
@@ -26,21 +27,13 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  useScrollLock(open);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
   }, [open]);
 
   return (
@@ -56,15 +49,15 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         if (event.target === ref.current && !locked) onClose();
       }}
       className={cn(
-        "m-0 mt-auto w-full max-w-none bg-transparent p-0 backdrop:bg-brand-deep/45 backdrop:backdrop-blur-[2px]",
-        "sm:m-auto sm:w-[calc(100%-2rem)]",
+        "m-0 mt-auto max-h-dvh w-full max-w-none overflow-y-auto overscroll-contain bg-transparent p-0 backdrop:bg-brand-deep/45 backdrop:backdrop-blur-[2px]",
+        "sm:m-auto sm:w-[calc(100%_-_2rem)]",
         widths[size],
       )}
     >
       {open && (
-        <div className="flex max-h-[92dvh] animate-pop-in flex-col rounded-t-2xl bg-white shadow-pop sm:max-h-[85dvh] sm:rounded-2xl">
-          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
-            <div>
+        <div className="flex max-h-[92dvh] min-w-0 animate-pop-in flex-col rounded-t-2xl bg-white shadow-pop sm:max-h-[85dvh] sm:rounded-2xl">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
+            <div className="min-w-0">
               <h2 id={titleId} className="text-lg font-semibold text-ink">
                 {title}
               </h2>
@@ -78,14 +71,14 @@ export function Modal({ open, onClose, title, description, children, footer, siz
               type="button"
               onClick={onClose}
               disabled={locked}
-              className="-mr-2 rounded-lg p-2 text-muted hover:bg-brand-50 hover:text-ink disabled:opacity-40"
+              className="-mr-2 shrink-0 rounded-lg p-2 text-muted hover:bg-brand-50 hover:text-ink disabled:opacity-40"
               aria-label="Close dialog"
             >
               <FiX className="size-5" />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
-          {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">{footer}</div>}
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">{children}</div>
+          {footer && <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">{footer}</div>}
         </div>
       )}
     </dialog>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { createContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import type { CartQuote } from "@aba-mart/shared";
@@ -7,41 +7,38 @@ import { cartStore } from "./cartStore";
 
 export interface CartContextValue {
   lines: CartLine[];
-  /** False until the saved cart has been read in the browser. */
   hydrated: boolean;
+  pending: boolean;
+  error: string | null;
+  quote: CartQuote | null;
   itemCount: number;
   subtotal: number;
-  addItem: (line: CartLineInput, quantity?: number) => void;
-  setQuantity: (key: string, quantity: number) => void;
-  removeItem: (key: string) => void;
-  clear: () => void;
+  addItem: (line: CartLineInput, quantity?: number) => Promise<void>;
+  setQuantity: (key: string, quantity: number) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+  clear: () => Promise<void>;
+  refresh: () => Promise<void>;
   applyQuote: (quote: CartQuote) => void;
 }
 
 export const CartContext = createContext<CartContextValue | null>(null);
 
 const actions = {
-  addItem: (line: CartLineInput, quantity = 1) => cartStore.dispatch({ type: "add", line, quantity }),
-  setQuantity: (key: string, quantity: number) => cartStore.dispatch({ type: "setQuantity", key, quantity }),
-  removeItem: (key: string) => cartStore.dispatch({ type: "remove", key }),
-  clear: () => cartStore.dispatch({ type: "clear" }),
-  applyQuote: (quote: CartQuote) => cartStore.dispatch({ type: "applyQuote", quote }),
+  addItem: cartStore.addItem,
+  setQuantity: cartStore.setQuantity,
+  removeItem: cartStore.removeItem,
+  clear: cartStore.clear,
+  refresh: cartStore.refresh,
+  applyQuote: cartStore.applyQuote,
 };
 
-/** Cart state is a reducer-driven store persisted to localStorage and shared through context. */
 export function CartProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot, cartStore.getServerSnapshot);
-
-  const value = useMemo<CartContextValue>(
-    () => ({
-      lines: state.lines,
-      hydrated: state.hydrated,
-      itemCount: state.lines.reduce((sum, l) => sum + l.quantity, 0),
-      subtotal: state.lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
-      ...actions,
-    }),
-    [state],
-  );
-
+  const value = useMemo<CartContextValue>(() => ({
+    ...state,
+    itemCount: state.lines.reduce((sum, line) => sum + line.quantity, 0),
+    subtotal: state.quote?.subtotal ?? 0,
+    ...actions,
+  }), [state]);
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

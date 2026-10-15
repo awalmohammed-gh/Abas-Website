@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useCart } from "@/hooks/useCart";
-import { ApiClientError, api } from "@/lib/api";
+import { ApiClientError } from "@/lib/api";
+import { guestApi } from "@/lib/guest-api";
+import { initiateOrderHandoff } from "@/lib/order-handoff";
 import { cn } from "@/lib/utils";
-import { openReservedWindow, reserveWhatsAppWindow } from "@/lib/whatsapp";
+import { reserveWhatsAppWindow } from "@/lib/whatsapp";
 import { saveLastOrder } from "./lastOrderStore";
 
 interface WhatsAppCheckoutProps {
@@ -34,17 +36,15 @@ interface FormState {
   deliveryLocation: string;
   deliveryAddress: string;
   notes: string;
+  whatsappConfirmed: boolean;
 }
 
-const EMPTY: FormState = { name: "", phone: "", fulfillmentMethod: "delivery", deliveryLocation: "", deliveryAddress: "", notes: "" };
+const EMPTY: FormState = { name: "", phone: "", fulfillmentMethod: "delivery", deliveryLocation: "", deliveryAddress: "", notes: "", whatsappConfirmed: false };
 
 const newKey = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-/** Phones open the WhatsApp app directly; desktops open WhatsApp Web in a new tab. */
-const isTouchDevice = () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
-
 export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }: WhatsAppCheckoutProps) {
-  const { lines, clear } = useCart();
+  const { lines } = useCart();
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -67,14 +67,17 @@ export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }
       return;
     }
     setErrors({});
+    if (!form.whatsappConfirmed) {
+      setErrors({ whatsappConfirmed: "Confirm that this number is registered on WhatsApp." });
+      return;
+    }
 
-    const touch = isTouchDevice();
     // Reserve the tab now, while we're still inside the click: browsers block pop-ups opened after a request.
-    const reserved = touch ? null : reserveWhatsAppWindow();
+    const reserved = reserveWhatsAppWindow();
     setSubmitting(true);
 
     try {
-      const result = await api.post<WhatsAppOrderResult>("/orders/whatsapp", {
+      const result = await guestApi.post<WhatsAppOrderResult>("/orders/whatsapp", {
         idempotencyKey,
         customer: parsed.data,
         items: lines.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity })),
@@ -82,23 +85,24 @@ export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }
       });
 
       saveLastOrder({
+        id: result.order.id,
         orderReference: result.order.orderReference,
         total: result.order.total,
         itemCount: result.order.items.reduce((sum, i) => sum + i.quantity, 0),
         whatsappUrl: result.whatsappUrl,
         message: result.message,
+        previewUrl: result.previewUrl,
       });
-      clear();
+      // A blocked window leaves the cart intact; the ready panel can retry this same order.
+      try {
+        await initiateOrderHandoff(result.order.id, result.whatsappUrl, reserved);
+      } catch {
+        // The prepared order remains in private history. Retrying its handoff is idempotent.
+      }
       setForm(EMPTY);
       setIdempotencyKey(newKey());
       onClose();
 
-      if (touch) {
-        window.location.href = result.whatsappUrl;
-      } else {
-        // If the reserved tab was blocked, the success panel shows an "Open WhatsApp" button instead.
-        openReservedWindow(reserved, result.whatsappUrl);
-      }
     } catch (error) {
       reserved?.close();
       if (error instanceof ApiClientError) {
@@ -181,7 +185,7 @@ export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Full name" required autoComplete="name" value={form.name} onChange={(e) => update("name", e.target.value)} error={errors.name} maxLength={80} />
           <Input
-            label="Phone number"
+            label="WhatsApp phone number"
             required
             type="tel"
             inputMode="tel"
@@ -193,6 +197,12 @@ export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }
             maxLength={25}
           />
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input type="checkbox" checked={form.whatsappConfirmed} onChange={(event) => update("whatsappConfirmed", event.target.checked)} className="mt-1 accent-brand" />
+          This number is registered on WhatsApp and can be used to contact me about my order.
+        </label>
+        {errors.whatsappConfirmed && <p role="alert" className="text-sm text-danger">{errors.whatsappConfirmed}</p>}
 
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm font-medium text-ink">How would you like to receive your order?</legend>
@@ -236,7 +246,7 @@ export function WhatsAppCheckout({ open, onClose, expectedTotal, onCartChanged }
           maxLength={500}
         />
         <p className="text-xs text-muted">
-          WhatsApp will open with your order written out. Review it and tap send — your order is only sent when you send the message.
+          WhatsApp will open with your order, product image links and a product preview link. Review it and tap send. Photos are shared as links; your message is only sent when you send it.
         </p>
       </form>
     </Modal>

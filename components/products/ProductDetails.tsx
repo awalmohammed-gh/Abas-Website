@@ -27,7 +27,7 @@ function Gallery({ product }: { product: ProductDTO }) {
   const current = images[active] ?? images[0];
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <div className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-cream-200">
         <ProductImage
           src={current?.url}
@@ -37,7 +37,7 @@ function Gallery({ product }: { product: ProductDTO }) {
         />
       </div>
       {images.length > 1 && (
-        <ul className="flex gap-2 overflow-x-auto pb-1" aria-label="Product images">
+        <ul className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain p-1" aria-label="Product images">
           {images.map((image, index) => (
             <li key={image.publicId} className="shrink-0">
               <button
@@ -62,7 +62,7 @@ function Gallery({ product }: { product: ProductDTO }) {
 
 export function ProductDetails({ product, whatsappEnabled }: { product: ProductDTO; whatsappEnabled: boolean }) {
   const router = useRouter();
-  const { addItem, lines } = useCart();
+  const { addItem, lines, hydrated, pending, error: cartError } = useCart();
   const hasVariants = product.variants.length > 0;
 
   const [selection, setSelection] = useState<Selection>(() =>
@@ -98,10 +98,14 @@ export function ProductDetails({ product, whatsappEnabled }: { product: ProductD
     maxQuantity: stock,
   };
 
-  function orderNow() {
+  async function orderNow() {
     if (!canBuy) return;
-    addItem(line, safeQuantity);
-    router.push("/cart?checkout=1");
+    try {
+      await addItem(line, safeQuantity);
+      router.push("/cart?checkout=1");
+    } catch {
+      // The shared cart error below explains why the item could not be added.
+    }
   }
 
   return (
@@ -202,13 +206,14 @@ export function ProductDetails({ product, whatsappEnabled }: { product: ProductD
               variant="whatsapp"
               size="lg"
               onClick={orderNow}
-              disabled={!canBuy || !whatsappEnabled}
+              disabled={!canBuy || !whatsappEnabled || !hydrated || pending}
               leftIcon={<FaWhatsapp className="size-5" aria-hidden="true" />}
             >
               Order via WhatsApp
             </Button>
           </div>
           {!whatsappEnabled && <p className="text-xs text-muted">WhatsApp ordering is being set up. Please check back soon.</p>}
+            {cartError && <p role="alert" className="text-sm text-danger">{cartError}</p>}
           <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
             <FiTruck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
             Delivery or pickup is arranged with you directly on WhatsApp after you send your order.

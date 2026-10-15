@@ -3,10 +3,11 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { Product } from "../src/models/Product.js";
-import { ORIGIN, createTestAdmin, loginAdmin, resetDatabase, startDatabase, stopDatabase, type AdminAgent } from "./helpers.js";
+import { ORIGIN, createTestAdmin, guestVisitor, loginAdmin, resetDatabase, startDatabase, stopDatabase, type AdminAgent } from "./helpers.js";
 
 const app = createApp();
 let admin: AdminAgent;
+let guest: Awaited<ReturnType<typeof guestVisitor>>;
 let gel: { id: string };
 let shirt: { id: string; variants: { id: string; attributes: { name: string; value: string }[] }[] };
 
@@ -19,10 +20,11 @@ const customer = {
 };
 
 function placeOrder(items: object[], extra: object = {}) {
-  return request(app)
-    .post("/api/orders/whatsapp")
-    .set("Origin", ORIGIN)
-    .send({ idempotencyKey: randomUUID(), customer, items, ...extra });
+  return { expect: async (status: number) => {
+    // Invalid inventory is rejected by both cart changes and checkout.
+    await guest.put("/api/cart", { items });
+    return guest.post("/api/orders/whatsapp", { idempotencyKey: randomUUID(), customer, items, ...extra }).expect(status);
+  } };
 }
 
 async function stockOf(productId: string, variantId?: string) {
@@ -37,6 +39,7 @@ beforeEach(async () => {
   await resetDatabase();
   await createTestAdmin();
   admin = await loginAdmin(app);
+  guest = await guestVisitor(app);
   await admin.put("/api/admin/settings", { storeName: "ABA Mart", whatsappNumber: "233201234567" }).expect(200);
   const category = (await admin.post("/api/admin/categories", { name: "Everyday" }).expect(201)).body.data;
   gel = (await admin.post("/api/admin/products", { name: "Dettol Shower Gel 500ml", category: category.id, price: 4500, stock: 5 }).expect(201)).body.data;
@@ -102,26 +105,25 @@ describe("WhatsApp checkout", () => {
 
   it("returns the same order for a repeated submission (idempotency)", async () => {
     const body = { idempotencyKey: randomUUID(), customer, items: [{ productId: gel.id, quantity: 1 }] };
-    const first = await request(app).post("/api/orders/whatsapp").set("Origin", ORIGIN).send(body).expect(201);
-    const again = await request(app).post("/api/orders/whatsapp").set("Origin", ORIGIN).send(body).expect(200);
+    await guest.put("/api/cart", { items: body.items }).expect(200);
+    const first = await guest.post("/api/orders/whatsapp", body).expect(201);
+    const again = await guest.post("/api/orders/whatsapp", body).expect(200);
     expect(again.body.data.order.orderReference).toBe(first.body.data.order.orderReference);
     expect(again.body.data.replayed).toBe(true);
 
     const orders = await admin.get("/api/admin/orders").expect(200);
     expect(orders.body.data.total).toBe(1);
 
-    const conflicting = await request(app)
-      .post("/api/orders/whatsapp")
-      .set("Origin", ORIGIN)
-      .send({ ...body, items: [{ productId: gel.id, quantity: 2 }] })
+    const conflicting = await guest.post("/api/orders/whatsapp", { ...body, items: [{ productId: gel.id, quantity: 2 }] })
       .expect(409);
     expect(conflicting.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
   });
 
   it("handles concurrent duplicate submissions without creating two orders", async () => {
     const body = { idempotencyKey: randomUUID(), customer, items: [{ productId: gel.id, quantity: 1 }] };
+    await guest.put("/api/cart", { items: body.items }).expect(200);
     const results = await Promise.all(
-      [1, 2, 3].map(() => request(app).post("/api/orders/whatsapp").set("Origin", ORIGIN).send(body)),
+      [1, 2, 3].map(() => guest.post("/api/orders/whatsapp", body)),
     );
     const refs = new Set(results.map((r) => r.body.data.order.orderReference));
     expect(refs.size).toBe(1);

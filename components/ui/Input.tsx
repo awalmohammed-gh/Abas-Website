@@ -2,7 +2,7 @@ import { useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "w-full rounded-xl border bg-white px-3.5 text-[15px] text-ink placeholder:text-muted/70 transition-colors " +
+  "min-w-0 max-w-full w-full rounded-xl border bg-white px-3.5 text-base md:text-[15px] text-ink placeholder:text-muted/70 transition-colors " +
   "focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15 disabled:bg-cream-200 disabled:text-muted";
 
 interface FieldProps {
@@ -21,7 +21,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("min-w-0 space-y-1.5", className)}>
       {label && (
         <label htmlFor={id} className="block text-sm font-medium text-ink">
           {label}
@@ -88,7 +88,7 @@ export function Textarea({ label, hint, error, required, wrapperClassName, class
           aria-describedby={describedBy}
           aria-invalid={invalid || undefined}
           required={required}
-          className={cn(fieldBase, "py-2.5 leading-relaxed", invalid ? "border-danger" : "border-line", className)}
+          className={cn(fieldBase, "resize-y py-2.5 leading-relaxed", invalid ? "border-danger" : "border-line", className)}
           {...props}
         />
       )}
@@ -142,7 +142,7 @@ export function Toggle({ checked, onChange, label, description, disabled }: Togg
   const id = useId();
   return (
     <div className="flex items-start justify-between gap-4">
-      <div>
+      <div className="min-w-0">
         <label htmlFor={id} className="text-sm font-medium text-ink">
           {label}
         </label>

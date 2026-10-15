@@ -1,15 +1,15 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiCheckCircle, FiCopy, FiShoppingBag } from "react-icons/fi";
-import { formatGHS, type CartQuote, type QuoteLine } from "@aba-mart/shared";
+import { formatGHS, type QuoteLine } from "@aba-mart/shared";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useCart } from "@/hooks/useCart";
-import { useDebounce } from "@/hooks/useDebounce";
-import { api } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
+import { initiateOrderHandoff } from "@/lib/order-handoff";
 import { cartLineKey } from "@/types/cart";
 import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
@@ -18,6 +18,20 @@ import { WhatsAppCheckout } from "./WhatsAppCheckout";
 
 function OrderSent({ order }: { order: LastOrder }) {
   const [copied, setCopied] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function continueOrder() {
+    setOpening(true);
+    setError(null);
+    try {
+      if (!await initiateOrderHandoff(order.id, order.whatsappUrl)) setError("Allow pop-ups, then try Open WhatsApp again. Your cart is still saved.");
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setOpening(false);
+    }
+  }
 
   async function copy() {
     try {
@@ -44,15 +58,20 @@ function OrderSent({ order }: { order: LastOrder }) {
         </div>
       </div>
       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-        <ButtonLink href={order.whatsappUrl} external variant="whatsapp" size="lg" leftIcon={<FaWhatsapp className="size-5" aria-hidden="true" />}>
+        <Button onClick={continueOrder} loading={opening} variant="whatsapp" size="lg" leftIcon={<FaWhatsapp className="size-5" aria-hidden="true" />}>
           Open WhatsApp
-        </ButtonLink>
+        </Button>
         <Button variant="secondary" size="lg" onClick={copy} leftIcon={<FiCopy className="size-4" aria-hidden="true" />}>
           {copied ? "Copied" : "Copy order message"}
         </Button>
         <Button variant="ghost" size="lg" onClick={() => saveLastOrder(null)}>
           Done
         </Button>
+      </div>
+      {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+      <div className="mt-4 flex flex-wrap gap-4">
+        <ButtonLink href="/my-orders" variant="link">View your private order history</ButtonLink>
+        <ButtonLink href={order.previewUrl} external variant="link">View products with images</ButtonLink>
       </div>
       <p className="mt-3 text-xs text-muted">
         WhatsApp didn&apos;t open? Use the button above, or copy the message and send it to us on WhatsApp.
@@ -62,40 +81,11 @@ function OrderSent({ order }: { order: LastOrder }) {
 }
 
 export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
-  const { lines, hydrated, itemCount, subtotal, clear, applyQuote } = useCart();
+  const { lines, hydrated, itemCount, subtotal, clear, applyQuote, quote, pending: checking, error, refresh } = useCart();
   const lastOrder = useLastOrder();
   const searchParams = useSearchParams();
   const [checkoutOpen, setCheckoutOpen] = useState(() => searchParams.get("checkout") === "1");
-  const [quote, setQuote] = useState<CartQuote | null>(null);
-  const [checking, setChecking] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-
-  // Re-price the cart from the server whenever its contents change.
-  const signature = lines.map((l) => `${l.key}x${l.quantity}`).join("|");
-  const debouncedSignature = useDebounce(signature, 350);
-
-  useEffect(() => {
-    if (!hydrated || !debouncedSignature) return;
-    const controller = new AbortController();
-    const items = lines.map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity }));
-    Promise.resolve()
-      .then(() => setChecking(true))
-      .then(() => api.post<CartQuote>("/orders/quote", { items }))
-      .then((result) => {
-        if (controller.signal.aborted) return;
-        setQuote(result);
-        applyQuote(result);
-      })
-      .catch(() => {
-        // Keep the saved prices; the server re-checks everything at checkout anyway.
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setChecking(false);
-      });
-    return () => controller.abort();
-    // lines are captured through the debounced signature
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSignature, hydrated, applyQuote]);
 
   const issues = useMemo(() => {
     const map = new Map<string, QuoteLine>();
@@ -107,17 +97,17 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
 
   const blockingIssue = lines.some((l) => {
     const issue = issues.get(l.key);
-    return issue && issue.status !== "quantity_adjusted";
+    return !!issue;
   });
-  const blockedReason = !whatsappEnabled
+  const blockedReason = error ? "Refresh your cart before continuing." : !whatsappEnabled
     ? "WhatsApp ordering is being set up. Please check back soon."
     : blockingIssue
-      ? "Some items are unavailable. Remove them to continue."
+      ? "Adjust the quantities or remove unavailable items to continue."
       : null;
 
   if (!hydrated) {
     return (
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]" aria-hidden="true">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]" aria-hidden="true">
         <div className="skeleton h-64" />
         <div className="skeleton h-72" />
       </div>
@@ -126,6 +116,11 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+        <p>Your cart is private to this browser visit.</p>
+        <ButtonLink href="/my-orders" variant="link">My orders &amp; guest privacy</ButtonLink>
+      </div>
+      {error && <div role="alert" className="rounded-xl bg-danger-50 p-4 text-sm text-danger">{error} <Button variant="link" onClick={() => void refresh()}>Retry</Button></div>}
       {lastOrder && <OrderSent order={lastOrder} />}
 
       {notice && (
@@ -144,7 +139,7 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
           />
         )
       ) : (
-        <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section aria-labelledby="cart-items-heading" className="rounded-2xl border border-line bg-white px-4 sm:px-6">
             <h2 id="cart-items-heading" className="sr-only">
               Items in your cart
@@ -165,7 +160,7 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
               setCheckoutOpen(true);
             }}
             onClear={() => {
-              if (window.confirm("Remove all items from your cart?")) clear();
+              if (window.confirm("Remove all items from your cart?")) void clear().catch(() => undefined);
             }}
           />
         </div>
@@ -176,9 +171,8 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
         onClose={() => setCheckoutOpen(false)}
         expectedTotal={subtotal}
         onCartChanged={(updated, message) => {
-          setQuote(updated);
           applyQuote(updated);
-          setNotice(`${message} We've updated your cart — please review it before sending.`);
+          setNotice(`${message} Please review your cart before sending.`);
         }}
       />
     </div>

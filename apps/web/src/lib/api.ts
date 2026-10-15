@@ -5,6 +5,22 @@ const stripSlash = (url: string) => url.replace(/\/+$/, "");
 /** Browser-facing API base URL. */
 export const API_URL = stripSlash(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api");
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+/**
+ * In local development the API is configured on localhost. When the store is
+ * opened from another host (127.0.0.1, or a LAN address for phone testing),
+ * call the API on that same host so CORS and the SameSite session cookie work.
+ */
+function requestBaseUrl(): string {
+  if (typeof window === "undefined") return API_URL;
+  const url = new URL(API_URL);
+  const pageHost = window.location.hostname;
+  if (!LOOPBACK_HOSTS.has(url.hostname) || url.hostname === pageHost) return API_URL;
+  url.hostname = pageHost;
+  return stripSlash(url.toString());
+}
+
 export class ApiClientError extends Error {
   readonly status: number;
   readonly code: string;
@@ -30,6 +46,11 @@ export class ApiClientError extends Error {
  * returned by login and /me, and sent with every state-changing admin request.
  */
 let csrfToken: string | null = null;
+let guestCsrfToken: string | null = null;
+
+export function setGuestCsrfToken(token: string | null): void {
+  guestCsrfToken = token;
+}
 
 export function setCsrfToken(token: string | null): void {
   csrfToken = token;
@@ -51,27 +72,44 @@ export async function apiRequest<T>(path: string, { method = "GET", body, signal
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   if (UNSAFE.has(method) && csrfToken && path.startsWith("/admin")) headers["X-CSRF-Token"] = csrfToken;
+  if (UNSAFE.has(method) && guestCsrfToken && !path.startsWith("/admin")) headers["X-CSRF-Token"] = guestCsrfToken;
+
+  // Bound both the connection and response body so offline servers cannot leave
+  // session checks, dashboard reads or checkout controls loading indefinitely.
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, isForm ? 60_000 : 20_000);
 
   let response: Response;
+  let payload: ApiResponse<T> | null = null;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${requestBaseUrl()}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       credentials: "include",
       cache: "no-store",
-      signal,
+      signal: controller.signal,
     });
+    try {
+      payload = (await response.json()) as ApiResponse<T>;
+    } catch (error) {
+      if (controller.signal.aborted) throw error;
+      payload = null;
+    }
   } catch (error) {
-    if ((error as Error).name === "AbortError") throw error;
+    if (timedOut) throw new ApiClientError(0, "REQUEST_TIMEOUT", "The store server took too long to respond. Please try again.");
+    if (signal?.aborted || (error as Error).name === "AbortError") throw error;
     throw new ApiClientError(0, "NETWORK_ERROR", "We couldn't reach the store server. Check your connection and try again.");
-  }
-
-  let payload: ApiResponse<T> | null = null;
-  try {
-    payload = (await response.json()) as ApiResponse<T>;
-  } catch {
-    payload = null;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
   }
 
   if (!response.ok || !payload || !payload.success) {

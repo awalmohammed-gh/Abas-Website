@@ -195,6 +195,7 @@ export interface OrderDTO {
 /** What the storefront receives after a WhatsApp order is recorded. */
 export interface WhatsAppOrderResult {
   order: {
+    id: string;
     orderReference: string;
     status: OrderStatus;
     items: OrderItemDTO[];
@@ -206,7 +207,32 @@ export interface WhatsAppOrderResult {
   whatsappUrl: string;
   /** True when this response is a replay of an order already recorded with the same idempotency key. */
   replayed: boolean;
+  previewUrl: string;
 }
+
+export interface OrderPreviewDTO {
+  storeName: string;
+  orderReference: string;
+  items: Pick<OrderItemDTO, "name" | "image" | "attributes" | "quantity" | "unitPrice" | "lineTotal">[];
+  total: number;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface GuestSessionDTO {
+  csrfToken: string;
+  expiresAt: string;
+}
+
+export type CustomerOrderDTO = Pick<OrderDTO,
+  "id" | "orderReference" | "customer" | "items" | "itemCount" | "subtotal" | "total" |
+  "fulfillmentMethod" | "deliveryLocation" | "deliveryAddress" | "notes" | "status" | "createdAt" | "updatedAt"
+> & {
+  checkoutHandoffStatus: "prepared" | "initiated";
+  whatsappUrl: string | null;
+  contactUrl: string | null;
+  previewUrl: string;
+};
 
 /* ---------------------------------------------------------- Cart quote */
 

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { CartLine } from "@/types/cart";
 
 export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | null }) {
-  const { setQuantity, removeItem } = useCart();
+  const { setQuantity, removeItem, pending } = useCart();
   const max = Math.min(line.maxQuantity, LIMITS.maxLineQuantity);
   const blocked = issue && issue.status !== "ok" && issue.status !== "quantity_adjusted";
 
@@ -20,7 +20,7 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <Link href={`/products/${line.slug}`} className="line-clamp-2 font-semibold text-ink hover:text-brand">
               {line.name}
@@ -36,12 +36,12 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
           <p className="shrink-0 font-display font-bold text-ink">{formatGHS(line.unitPrice * line.quantity)}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center rounded-xl border border-line bg-white" role="group" aria-label={`Quantity for ${line.name}`}>
             <button
               type="button"
-              onClick={() => setQuantity(line.key, line.quantity - 1)}
-              disabled={line.quantity <= 1 || !!blocked}
+              onClick={() => void setQuantity(line.key, Math.min(line.quantity - 1, max)).catch(() => undefined)}
+              disabled={pending || line.quantity <= 1 || !!blocked}
               className="flex size-10 items-center justify-center text-ink disabled:opacity-35"
               aria-label="Decrease quantity"
             >
@@ -52,8 +52,8 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
             </span>
             <button
               type="button"
-              onClick={() => setQuantity(line.key, line.quantity + 1)}
-              disabled={line.quantity >= max || !!blocked}
+              onClick={() => void setQuantity(line.key, line.quantity + 1).catch(() => undefined)}
+              disabled={pending || line.quantity >= max || !!blocked}
               className="flex size-10 items-center justify-center text-ink disabled:opacity-35"
               aria-label="Increase quantity"
             >
@@ -62,7 +62,8 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
           </div>
           <button
             type="button"
-            onClick={() => removeItem(line.key)}
+            onClick={() => void removeItem(line.key).catch(() => undefined)}
+            disabled={pending}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted hover:bg-danger-50 hover:text-danger"
           >
             <FiTrash2 className="size-4" aria-hidden="true" /> Remove

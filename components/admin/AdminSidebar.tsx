@@ -29,13 +29,13 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { logout } = useAdminSession();
 
   return (
-    <div className="flex h-full flex-col bg-brand-deep text-cream">
-      <div className="flex h-16 items-center border-b border-white/10 px-5">
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-brand-deep text-cream">
+      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
         <Link href="/admin" onClick={onNavigate} aria-label="Admin overview">
           <Logo tone="dark" />
         </Link>
       </div>
-      <nav aria-label="Admin" className="flex-1 overflow-y-auto px-3 py-4">
+      <nav aria-label="Admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
         <ul className="space-y-1">
           {ADMIN_NAV.map(({ label, href, icon: Icon, exact }) => {
             const active = isNavActive(pathname, href, exact);
@@ -58,7 +58,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </ul>
       </nav>
-      <div className="space-y-1 border-t border-white/10 p-3">
+      <div className="shrink-0 space-y-1 border-t border-white/10 p-3">
         <a
           href="/"
           target="_blank"

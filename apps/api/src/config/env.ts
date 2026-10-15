@@ -67,6 +67,7 @@ const envSchema = z
       .optional(),
 
     WEB_REVALIDATE_URL: z.url().optional(),
+    STOREFRONT_URL: z.url().refine((value) => /^https?:\/\//.test(value), "STOREFRONT_URL must use http or https").optional(),
     REVALIDATE_SECRET: z.string().min(24, "REVALIDATE_SECRET must be at least 24 characters").optional(),
   })
   .superRefine((value, ctx) => {
@@ -84,6 +85,10 @@ const envSchema = z
         path: ["REVALIDATE_SECRET"],
         message: "REVALIDATE_SECRET is required when WEB_REVALIDATE_URL is set",
       });
+    }
+    if (value.NODE_ENV === "production") {
+      const storefront = value.STOREFRONT_URL ?? value.CLIENT_ORIGIN[0];
+      if (!storefront?.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["STOREFRONT_URL"], message: "Production order previews need an HTTPS storefront URL" });
     }
   });
 

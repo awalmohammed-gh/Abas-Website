@@ -66,7 +66,7 @@ function SettingsForm({ initial, onSaved }: { initial: StoreSettingsDTO; onSaved
   }
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[1fr_360px]">
+    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="min-w-0 space-y-6">
         <Panel title="WhatsApp ordering">
           <div className="space-y-3 p-4 sm:p-5">
