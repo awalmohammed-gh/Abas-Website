@@ -96,6 +96,7 @@ export const productInputSchema = z
     slug: slugSchema.optional(),
     description: optionalText(5000, "Description"),
     category: objectIdSchema,
+    subCategory: optionalText(60, "Subcategory"),
     price: pesewasSchema,
     compareAtPrice: pesewasSchema.nullable().default(null),
     images: z.array(imageAssetSchema).max(LIMITS.maxProductImages, `Up to ${LIMITS.maxProductImages} images`).default([]),

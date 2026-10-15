@@ -31,8 +31,9 @@ export function buildOrderMessage(input: WhatsAppOrderMessageInput): string {
   const storeName = cleanText(input.storeName) || "ABA Mart";
 
   lines.push(`Hello ${storeName},`, "");
-  lines.push("I would like to order the following items:", "");
+  lines.push("I would like to place an order.", "");
   lines.push(`Order Reference: ${input.orderReference}`, "");
+  lines.push("Products:", "");
 
   input.items.forEach((item, index) => {
     lines.push(`${index + 1}. ${cleanText(item.name)}`);
@@ -45,30 +46,24 @@ export function buildOrderMessage(input: WhatsAppOrderMessageInput): string {
   });
 
   lines.push(`Total: ${formatGHS(input.total)}`, "");
-  lines.push(`Customer: ${cleanText(input.customer.name)}`, "");
-  lines.push(`Phone: ${formatPhoneDisplay(input.customer.phone)}`, "");
-  lines.push(`Delivery/Pickup: ${FULFILLMENT_LABELS[input.fulfillmentMethod]}`, "");
+  lines.push(`Customer Name: ${cleanText(input.customer.name)}`);
+  lines.push(`Phone: ${formatPhoneDisplay(input.customer.phone)}`);
+  lines.push(`Delivery Method: ${FULFILLMENT_LABELS[input.fulfillmentMethod]}`);
 
   const location = cleanText(input.deliveryLocation ?? "");
   if (input.fulfillmentMethod === "delivery" && location) {
-    lines.push(`Location: ${location}`, "");
+    lines.push(`Location: ${location}`);
   }
   const address = cleanText(input.deliveryAddress ?? "", { multiline: true });
   if (input.fulfillmentMethod === "delivery" && address) {
-    lines.push(`Address: ${address}`, "");
+    lines.push(`Address: ${address}`);
   }
   const notes = cleanText(input.notes ?? "", { multiline: true });
   if (notes) {
-    lines.push(`Additional Notes: ${notes}`, "");
+    lines.push(`Notes: ${notes}`);
   }
 
-  lines.push(
-    input.fulfillmentMethod === "pickup"
-      ? "Please confirm availability and pickup arrangements."
-      : "Please confirm availability and delivery arrangements.",
-    "",
-  );
-  lines.push("Thank you.");
+  lines.push("", "Please confirm my order.", "", "Thank you.");
 
   return lines.join("\n");
 }

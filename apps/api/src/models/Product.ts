@@ -19,6 +19,7 @@ export interface ProductDoc {
   slug: string;
   description: string;
   category: Types.ObjectId;
+  subCategory: string;
   /** Selling price in pesewas. */
   price: number;
   /** Original price in pesewas, shown struck through when higher than price. */
@@ -71,6 +72,7 @@ const productSchema = new Schema<ProductDoc>(
     slug: { type: String, required: true, trim: true, lowercase: true, maxlength: 140 },
     description: { type: String, default: "", maxlength: 5000 },
     category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
+    subCategory: { type: String, default: "", trim: true, maxlength: 60 },
     price: { type: Number, required: true, min: 0, max: LIMITS.maxPriceInPesewas, validate: integerValidator },
     compareAtPrice: { type: Number, default: null, min: 0, validate: integerValidator },
     images: { type: [imageAssetSchema], default: [] },

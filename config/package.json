@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Server-side MongoDB and Cloudinary configuration shared by the ABA Mart API"
+}

@@ -1,14 +1,10 @@
-import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
+import type { UploadApiResponse } from "cloudinary";
 import type { ImageAsset, UploadFolder } from "@aba-mart/shared";
+import { configureCloudinary } from "../../../../config/cloudinary.js";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 
-cloudinary.config({
-  cloud_name: env.CLOUDINARY_CLOUD_NAME,
-  api_key: env.CLOUDINARY_API_KEY,
-  api_secret: env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+const cloudinary = configureCloudinary(env.cloudinary);
 
 const URL_PREFIX = `https://res.cloudinary.com/${env.CLOUDINARY_CLOUD_NAME}/image/upload/`;
 const PUBLIC_ID_PREFIX = `${env.CLOUDINARY_FOLDER}/`;

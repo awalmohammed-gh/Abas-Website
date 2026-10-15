@@ -35,8 +35,8 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
       </Link>
 
       <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        {product.category && (
-          <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{product.category.name}</p>
+        {(product.subCategory || product.category) && (
+          <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{product.subCategory || product.category?.name}</p>
         )}
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-[15px]">
           <Link href={href} className="hover:text-brand">

@@ -5,7 +5,7 @@ import { FiClock, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { formatPhoneDisplay } from "@aba-mart/shared";
 import { getSettings } from "@/lib/catalog";
 import { whatsappChatUrl } from "@/lib/whatsapp";
-import { ContactForm } from "./ContactForm";
+import { ContactForm } from "@/components/contact/ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact us",

@@ -71,6 +71,8 @@ export interface ProductDTO {
   slug: string;
   description: string;
   category: CategorySummary | null;
+  /** Optional finer grouping inside the category, e.g. "Jeans" or "Shower Gel". Empty when not set. */
+  subCategory: string;
   /** Current selling price in pesewas. */
   price: number;
   /** Original price before discount in pesewas, if discounted. */

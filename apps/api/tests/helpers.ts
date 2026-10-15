@@ -2,7 +2,7 @@ import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import request from "supertest";
 import type { Express } from "express";
-import { connectDatabase } from "../src/config/database.js";
+import { connectMongoDB } from "../../../config/mongodb.js";
 import { Admin } from "../src/models/Admin.js";
 import { hashPassword } from "../src/services/authService.js";
 
@@ -15,7 +15,7 @@ let replSet: MongoMemoryReplSet | null = null;
 /** A replica set is needed because order confirmation uses transactions. */
 export async function startDatabase(): Promise<void> {
   replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: "wiredTiger" } });
-  await connectDatabase(replSet.getUri(), "aba-mart-test");
+  await connectMongoDB({ uri: replSet.getUri(), dbName: "aba-mart-test", log: false });
   await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
 }
 

@@ -39,7 +39,7 @@ async function activeCategoryIds(): Promise<Types.ObjectId[]> {
 function searchFilter(q: string): QueryFilter<ProductDoc> {
   if (!q) return {};
   const pattern = new RegExp(escapeRegExp(q), "i");
-  return { $or: [{ name: pattern }, { description: pattern }, { "variants.sku": pattern }] };
+  return { $or: [{ name: pattern }, { description: pattern }, { subCategory: pattern }, { "variants.sku": pattern }] };
 }
 
 /* ------------------------------------------------------------------ Public */
@@ -154,6 +154,7 @@ function applyInput(doc: InstanceType<typeof Product>, input: ProductInput): voi
   doc.name = input.name;
   doc.description = input.description;
   doc.category = new Types.ObjectId(input.category);
+  doc.subCategory = input.subCategory;
   doc.price = input.price;
   doc.compareAtPrice = input.compareAtPrice;
   doc.images = input.images;
@@ -199,6 +200,7 @@ export async function updateProduct(id: string, patch: Record<string, unknown>):
     slug: current.slug,
     description: current.description,
     category: doc.category.toString(),
+    subCategory: current.subCategory,
     price: current.price,
     compareAtPrice: current.compareAtPrice,
     images: current.images,

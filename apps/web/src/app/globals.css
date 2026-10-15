@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Shared components live outside the app, at the repository root. */
+@source "../../../../components";
+
 @theme {
   --color-brand: #174c3c;
   --color-brand-deep: #10382d;

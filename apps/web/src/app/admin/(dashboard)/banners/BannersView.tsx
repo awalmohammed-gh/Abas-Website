@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminResource } from "@/hooks/useAdminResource";
 import { api, errorMessage } from "@/lib/api";
-import { BannerForm } from "./BannerForm";
+import { BannerForm } from "@/components/admin/BannerForm";
 
 export function BannersView() {
   const toast = useToast();

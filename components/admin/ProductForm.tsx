@@ -46,6 +46,7 @@ interface FormState {
   slug: string;
   description: string;
   category: string;
+  subCategory: string;
   regularPrice: string;
   discountPrice: string;
   images: ImageAsset[];
@@ -71,6 +72,7 @@ function fromProduct(product?: AdminProductDTO | null): FormState {
       slug: "",
       description: "",
       category: "",
+      subCategory: "",
       regularPrice: "",
       discountPrice: "",
       images: [],
@@ -88,6 +90,7 @@ function fromProduct(product?: AdminProductDTO | null): FormState {
     slug: product.slug,
     description: product.description,
     category: product.category?.id ?? "",
+    subCategory: product.subCategory ?? "",
     regularPrice: pesewasToInput(product.compareAtPrice ?? product.price),
     discountPrice: product.compareAtPrice ? pesewasToInput(product.price) : "",
     images: product.images,
@@ -205,6 +208,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
       slug: form.slug.trim() ? slugify(form.slug) : undefined,
       description: form.description,
       category: form.category,
+      subCategory: form.subCategory,
       price: discount ?? regular!,
       compareAtPrice: discount !== null ? regular : null,
       images: form.images,
@@ -475,6 +479,15 @@ export function ProductForm({ product, categories }: ProductFormProps) {
               error={errors.category}
               placeholder="Choose a category"
               options={categories.map((c) => ({ value: c.id, label: c.isActive ? c.name : `${c.name} (hidden)` }))}
+            />
+            <Input
+              label="Subcategory"
+              value={form.subCategory}
+              onChange={(e) => set("subCategory", e.target.value)}
+              error={errors.subCategory}
+              maxLength={60}
+              placeholder="e.g. Jeans, Shower Gel"
+              hint="Optional. Shown on product cards and included in search."
             />
             {categories.length === 0 && (
               <p className="text-xs text-muted">

@@ -110,8 +110,8 @@ export function ProductDetails({ product, whatsappEnabled }: { product: ProductD
 
       <div className="space-y-6">
         <div className="space-y-3">
-          {product.category && (
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">{product.category.name}</p>
+          {(product.category || product.subCategory) && (
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">{[product.category?.name, product.subCategory].filter(Boolean).join(" · ")}</p>
           )}
           <h1 className="text-2xl font-bold leading-tight text-ink sm:text-3xl lg:text-4xl">{product.name}</h1>
           <PriceTag price={pricing.price} compareAtPrice={pricing.compareAtPrice} size="lg" />

@@ -1,9 +1,9 @@
 import { env } from "./config/env.js";
-import { connectDatabase, disconnectDatabase } from "./config/database.js";
+import { connectMongoDB, disconnectMongoDB } from "../../../config/mongodb.js";
 import { createApp } from "./app.js";
 
 async function main(): Promise<void> {
-  await connectDatabase();
+  await connectMongoDB(env.mongo);
   const app = createApp();
   const server = app.listen(env.PORT, () => {
     console.log(`[api] ABA Mart API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
@@ -12,7 +12,7 @@ async function main(): Promise<void> {
   const shutdown = (signal: string) => {
     console.log(`[api] ${signal} received, shutting down`);
     server.close(() => {
-      disconnectDatabase()
+      disconnectMongoDB()
         .catch(() => undefined)
         .finally(() => process.exit(0));
     });

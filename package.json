@@ -19,10 +19,11 @@
     "start:api": "npm run start -w @aba-mart/api",
     "start:web": "npm run start -w @aba-mart/web",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present && npm run lint:shared-dirs",
     "test": "npm run build:shared && npm run test --workspaces --if-present",
     "create-admin": "npm run create-admin -w @aba-mart/api",
-    "seed:mock": "npm run seed:mock -w @aba-mart/api --"
+    "seed:mock": "npm run seed:mock -w @aba-mart/api --",
+    "lint:shared-dirs": "eslint --config apps/web/eslint.config.mjs components && eslint --config apps/api/eslint.config.js config"
   },
   "devDependencies": {
     "concurrently": "^10.0.6"

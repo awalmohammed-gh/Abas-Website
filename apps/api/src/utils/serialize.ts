@@ -62,6 +62,7 @@ export function toProductDTO(product: ProductLean): ProductDTO {
     slug: product.slug,
     description: product.description,
     category: categorySummary(product.category),
+    subCategory: product.subCategory ?? "",
     price: product.price,
     compareAtPrice: product.compareAtPrice && product.compareAtPrice > product.price ? product.compareAtPrice : null,
     images: product.images.map((i) => image(i)!),

@@ -42,7 +42,7 @@ function productJsonLd(product: ProductDTO, storeName: string) {
     description: product.description || undefined,
     image: product.images.map((i) => i.url),
     sku: product.id,
-    category: product.category?.name,
+    category: [product.category?.name, product.subCategory].filter(Boolean).join(" > ") || undefined,
     brand: { "@type": "Brand", name: storeName },
     offers:
       range.min === range.max

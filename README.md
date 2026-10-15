@@ -10,6 +10,29 @@ Multi-category online store for Ghana with **WhatsApp click-to-chat checkout**. 
 
 npm workspaces; one lockfile at the root.
 
+## Project structure
+
+```text
+market/
+├── apps/
+│   ├── web/                 Next.js app
+│   │   └── src/app/         all routes: (store)/…, admin/…, api/revalidate
+│   │                        (Next.js requires app/ or src/app/ as the route root)
+│   └── api/                 Express API: models, controllers, routes, middleware,
+│                            services, validators, utils, scripts
+├── components/              all reusable React components (layout, home, products,
+│                            cart, admin, ui, brand, contact), imported as @/components/…
+├── config/
+│   ├── mongodb.ts           the single MongoDB connection (used by the API, scripts, tests)
+│   └── cloudinary.ts        the single Cloudinary configuration
+├── packages/shared/         types, Zod schemas, money/phone/WhatsApp helpers
+└── data/                    mock catalogue images + data.ts (used by npm run seed:mock)
+```
+
+- **Route-only files stay next to their routes:** `page`, `layout`, `loading`, `error`, `not-found` and the admin page bodies (`*View.tsx`).
+- **Shared components live at the root:** `components/` sits outside the app. `apps/web/tsconfig.json` maps `@/components/*` to it, and `globals.css` tells Tailwind to scan it (`@source`).
+- **`config/` takes values, it doesn't read them:** the API validates environment variables (`apps/api/src/config/env.ts`) and passes the values into `config/mongodb.ts` and `config/cloudinary.ts`. So credentials are validated in one place and the connection code exists once.
+
 ---
 
 ## Quick start
@@ -52,7 +75,7 @@ The storefront only ever shows what is in the database. With no products it show
 | `npm run build` | Production build of shared, API (`apps/api/dist`) and web (`.next`) |
 | `npm run start:api` / `npm run start:web` | Run the production builds |
 | `npm run typecheck` | TypeScript checks for every workspace |
-| `npm run lint` | ESLint for API and web |
+| `npm run lint` | ESLint for the API, the web app, `components/` and `config/` |
 | `npm test` | Shared unit tests and API integration tests (in-memory MongoDB replica set) |
 | `npm run create-admin` | Create an admin, or reset an existing admin's password (signs out their sessions) |
 | `npm run seed:mock` | Load the starter catalogue from `data/` (`-- --remove` to take it out again) |
@@ -62,7 +85,9 @@ The storefront only ever shows what is in the database. With no products it show
 1. The cart lives in the browser (`localStorage`, validated on read). It holds only display snapshots.
 2. On the cart page the API re-prices the cart (`POST /api/orders/quote`) so customers see current prices and stock.
 3. "Order via WhatsApp" collects name, phone, delivery or pickup, location and notes, validated in the browser and again on the server.
-4. `POST /api/orders/whatsapp` loads authoritative prices and stock, rejects unavailable or over-stock items, and saves a **WhatsApp Pending** order with a reference such as `ABA-000125`. It then builds the message and the `https://wa.me/<number>?text=<encoded>` link.
+4. `POST /api/orders/whatsapp` loads authoritative prices and stock, rejects unavailable or over-stock items, and saves a **WhatsApp Pending** order with a reference such as `ABA-000125`. It then builds the message and the `https://wa.me/<number>?text=<encoded>` click-to-chat link. No WhatsApp Business API, tokens or webhooks are involved.
+
+   The number comes from **Admin → Settings** (stored in MongoDB). `STORE_WHATSAPP_NUMBER` in `apps/api/.env` only sets the initial value (ABA Mart: `233278857814`, local `0278857814`). Nothing else in the code holds the number.
 5. The browser opens WhatsApp. Desktop opens a tab reserved during the click so pop-up blockers don't interfere. Phones hand off to the WhatsApp app. A success panel always offers **Open WhatsApp** and **Copy order message** as fallbacks.
 
 Safeguards:
@@ -95,7 +120,7 @@ Safeguards:
 
 `Admin`, `Category`, `Product` (with variants), `Order` (snapshots of name, variant and unit price at order time), `Banner`, `Settings` (single document), `Counter` (order reference sequence).
 
-All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products are **archived** rather than deleted, so order history stays intact. A category can't be deleted while any product uses it; hide it instead.
+All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products have an optional **subcategory** (e.g. "Jeans", "Shower Gel"), shown on cards and included in search. Products are **archived** rather than deleted, so order history stays intact. A category can't be deleted while any product uses it; hide it instead.
 
 ## Caching
 
@@ -107,11 +132,16 @@ The cart quote and checkout always hit the API directly, so stock and prices are
 
 ## Deployment notes
 
-- **API** (Render, Railway, a VPS…): `npm run build -w @aba-mart/shared && npm run build -w @aba-mart/api`, then `npm run start:api`. Set `NODE_ENV=production` and `TRUST_PROXY=1` behind a proxy.
+- **API** (Render, Railway, a VPS…): `npm run build -w @aba-mart/shared && npm run build -w @aba-mart/api`, then `npm run start:api` (runs `apps/api/dist/apps/api/src/server.js`; the build also compiles `config/`). Set `NODE_ENV=production` and `TRUST_PROXY=1` behind a proxy.
 - **Web** (Vercel or any Node host): build `apps/web` after `packages/shared`. Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET` and `CLOUDINARY_CLOUD_NAME`.
 - **Same parent domain** (e.g. `shop.example.com` and `api.example.com`): `COOKIE_SAME_SITE=lax`. **Different domains**: `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true`.
 - Add every storefront origin to the API's `CLIENT_ORIGIN`, comma-separated.
 - MongoDB must be a replica set (Atlas always is), because order confirmation uses transactions.
+
+## Development notes
+
+- In development, `GET /api/health` also reports `databaseName`, the database the API is actually connected to. This is hidden in production.
+- `npm run dev` runs the API with `tsx watch`, which restarts it on every file change using `apps/api/.env`. Stop it before running anything against a test database on the same port.
 
 ## Known notes
 

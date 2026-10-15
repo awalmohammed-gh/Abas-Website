@@ -107,6 +107,19 @@ export const env = {
   isTest: data.NODE_ENV === "test",
   cookieSecure: data.COOKIE_SECURE ?? data.NODE_ENV === "production",
   maxUploadBytes: Math.round(data.MAX_UPLOAD_MB * 1024 * 1024),
+  /** Options for market/config/mongodb.ts */
+  mongo: {
+    uri: data.MONGODB_URI,
+    dbName: data.MONGODB_DB_NAME,
+    dnsServers: data.DNS_SERVERS,
+    log: data.NODE_ENV !== "test",
+  },
+  /** Credentials for market/config/cloudinary.ts */
+  cloudinary: {
+    cloudName: data.CLOUDINARY_CLOUD_NAME,
+    apiKey: data.CLOUDINARY_API_KEY,
+    apiSecret: data.CLOUDINARY_API_SECRET,
+  },
 } as const;
 
 export type Env = typeof env;

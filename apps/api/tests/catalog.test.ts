@@ -135,6 +135,24 @@ describe("products", () => {
     expect(paged.body.data.items).toHaveLength(1);
   });
 
+  it("stores an optional subcategory and includes it in search", async () => {
+    const category = await createCategory("Clothing");
+    const created = await admin
+      .post("/api/admin/products", { name: "Baggy Gray Jeans", category: category.id, subCategory: " Jeans ", price: 13500, stock: 5 })
+      .expect(201);
+    expect(created.body.data.subCategory).toBe("Jeans");
+
+    const plain = await admin.post("/api/admin/products", { name: "Plain Tee", category: category.id, price: 5000, stock: 5 }).expect(201);
+    expect(plain.body.data.subCategory).toBe("");
+
+    const search = await request(app).get("/api/products?q=jeans").expect(200);
+    expect(search.body.data.items.map((p: { name: string }) => p.name)).toEqual(["Baggy Gray Jeans"]);
+
+    const edited = await admin.patch(`/api/admin/products/${created.body.data.id}`, { subCategory: "Wide-leg Jeans" }).expect(200);
+    expect(edited.body.data.subCategory).toBe("Wide-leg Jeans");
+    expect(edited.body.data.price).toBe(13500); // partial update keeps other fields
+  });
+
   it("tracks stock per variant", async () => {
     const category = await createCategory("Clothing");
     const res = await admin

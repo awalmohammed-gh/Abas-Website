@@ -3,7 +3,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
 import { env } from "./config/env.js";
-import { isDatabaseConnected } from "./config/database.js";
+import { connectedDatabaseName, isMongoDBConnected } from "../../../config/mongodb.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { apiLimiter, originGuard } from "./middleware/security.js";
 import { apiRouter } from "./routes/index.js";
@@ -29,8 +29,16 @@ export function createApp(): Express {
   app.use(originGuard);
 
   app.get("/api/health", (_req, res) => {
-    const database = isDatabaseConnected();
-    res.status(database ? 200 : 503).json({ success: database, data: { status: database ? "ok" : "degraded", database } });
+    const database = isMongoDBConnected();
+    res.status(database ? 200 : 503).json({
+      success: database,
+      data: {
+        status: database ? "ok" : "degraded",
+        database,
+        // Outside production, report which database this server writes to so tooling can verify it.
+        ...(env.isProduction ? {} : { databaseName: connectedDatabaseName() }),
+      },
+    });
   });
 
   app.use("/api", apiLimiter, apiRouter);

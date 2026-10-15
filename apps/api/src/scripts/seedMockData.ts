@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { Types } from "mongoose";
 import { productInputSchema, slugify } from "@aba-mart/shared";
 import { env } from "../config/env.js";
-import { connectDatabase, disconnectDatabase } from "../config/database.js";
+import { connectMongoDB, disconnectMongoDB } from "../../../../config/mongodb.js";
 import { Category } from "../models/Category.js";
 import { Order } from "../models/Order.js";
 import { Product } from "../models/Product.js";
@@ -43,6 +43,7 @@ function productPayload(mock: MockProduct, categoryId: string, image: { url: str
     name: mock.name,
     slug: slugify(mock.name),
     description: mock.description,
+    subCategory: mock.subCategory,
     category: categoryId,
     price: discount ?? regular,
     compareAtPrice: discount !== null ? regular : null,
@@ -76,7 +77,9 @@ async function seed(): Promise<void> {
   for (const mock of MOCK_PRODUCTS) {
     const slug = slugify(mock.name);
     if (await Product.exists({ slug })) {
-      console.log(`= ${mock.name} (already exists, left unchanged)`);
+      // Only fill in a subcategory that is missing; never overwrite admin edits.
+      const filled = await Product.updateOne({ slug, subCategory: { $in: ["", null] } }, { $set: { subCategory: mock.subCategory } });
+      console.log(`= ${mock.name} (already exists${filled.modifiedCount ? ", subcategory added" : ", left unchanged"})`);
       continue;
     }
     const file = path.join(dataDir, mock.image);
@@ -141,13 +144,13 @@ async function remove(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  await connectDatabase();
+  await connectMongoDB(env.mongo);
   try {
     if (process.argv.includes("--remove")) await remove();
     else await seed();
     await revalidateStorefront("products", "categories", "settings");
   } finally {
-    await disconnectDatabase();
+    await disconnectMongoDB();
   }
 }
 

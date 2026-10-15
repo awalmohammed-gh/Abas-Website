@@ -92,16 +92,59 @@ describe("WhatsApp", () => {
   });
 
   it("builds the order message from validated order data", () => {
-    expect(message).toContain("Hello ABA Mart,");
-    expect(message).toContain("Order Reference: ABA-000125");
-    expect(message).toContain("1. Dettol Shower Gel 500ml\nQuantity: 2\nUnit Price: GHS 45.00\nSubtotal: GHS 90.00");
-    expect(message).toContain("2. Men's T-Shirt\nSize: Large\nColor: Black\nQuantity: 1");
-    expect(message).toContain("Total: GHS 170.00");
-    expect(message).toContain("Phone: +233 24 123 4567");
-    expect(message).toContain("Delivery/Pickup: Delivery");
-    expect(message).toContain("Location: East Legon, Accra");
-    expect(message).toContain("Additional Notes: Call before delivery");
-    expect(message.trim().endsWith("Thank you.")).toBe(true);
+    expect(message).toBe(
+      [
+        "Hello ABA Mart,",
+        "",
+        "I would like to place an order.",
+        "",
+        "Order Reference: ABA-000125",
+        "",
+        "Products:",
+        "",
+        "1. Dettol Shower Gel 500ml",
+        "Quantity: 2",
+        "Unit Price: GHS 45.00",
+        "Subtotal: GHS 90.00",
+        "",
+        "2. Men's T-Shirt",
+        "Size: Large",
+        "Color: Black",
+        "Quantity: 1",
+        "Unit Price: GHS 80.00",
+        "Subtotal: GHS 80.00",
+        "",
+        "Total: GHS 170.00",
+        "",
+        "Customer Name: Ama Mensah",
+        "Phone: +233 24 123 4567",
+        "Delivery Method: Delivery",
+        "Location: East Legon, Accra",
+        "Notes: Call before delivery",
+        "",
+        "Please confirm my order.",
+        "",
+        "Thank you.",
+      ].join("\n"),
+    );
+  });
+
+  it("leaves out the location for pickup orders", () => {
+    const pickup = buildOrderMessage({
+      storeName: "ABA Mart",
+      orderReference: "ABA-000126",
+      items: [{ name: "Antiseptic Soap", quantity: 1, unitPrice: 1200, lineTotal: 1200 }],
+      total: 1200,
+      customer: { name: "Kofi", phone: "233551234567" },
+      fulfillmentMethod: "pickup",
+      deliveryLocation: "Ignored for pickup",
+    });
+    expect(pickup).toContain("Delivery Method: Pickup\n\nPlease confirm my order.");
+    expect(pickup).not.toContain("Location:");
+  });
+
+  it("links to the ABA Mart WhatsApp number", () => {
+    expect(buildWhatsAppUrl("233278857814", "Hi")).toBe("https://wa.me/233278857814?text=Hi");
   });
 
   it("encodes the click-to-chat URL", () => {

@@ -7,7 +7,8 @@
  */
 import { z } from "zod";
 import { ADMIN_ROLES } from "@aba-mart/shared";
-import { connectDatabase, disconnectDatabase } from "../config/database.js";
+import { connectMongoDB, disconnectMongoDB } from "../../../../config/mongodb.js";
+import { env } from "../config/env.js";
 import { Admin } from "../models/Admin.js";
 import { hashPassword } from "../services/authService.js";
 
@@ -32,7 +33,7 @@ async function main(): Promise<void> {
   }
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME, ADMIN_ROLE } = parsed.data;
 
-  await connectDatabase();
+  await connectMongoDB(env.mongo);
   try {
     const passwordHash = await hashPassword(ADMIN_PASSWORD);
     const existing = await Admin.findOne({ email: ADMIN_EMAIL });
@@ -47,7 +48,7 @@ async function main(): Promise<void> {
       console.log(`Created ${ADMIN_ROLE} account for ${ADMIN_EMAIL}.`);
     }
   } finally {
-    await disconnectDatabase();
+    await disconnectMongoDB();
   }
 }
 
