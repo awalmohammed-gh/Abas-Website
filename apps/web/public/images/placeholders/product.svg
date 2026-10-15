@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#F3EFE5"/>
+  <g transform="translate(152 140)" opacity="0.55">
+    <rect width="96" height="96" rx="24" fill="#174C3C"/>
+    <path d="M27 71 48 23l21 48" fill="none" stroke="#FAF8F3" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="48" cy="56" r="7" fill="#E89B36"/>
+  </g>
+  <text x="200" y="276" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#68736C">Image coming soon</text>
+</svg>

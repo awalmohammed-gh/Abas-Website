@@ -1,26 +1,30 @@
 {
-  "name": "market",
-  "version": "0.1.0",
+  "name": "aba-mart",
+  "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+  "description": "ABA Mart - multi-category online retail store with WhatsApp checkout",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
   },
-  "dependencies": {
-    "next": "16.4.1",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+  "scripts": {
+    "build:shared": "npm run build -w @aba-mart/shared",
+    "dev": "npm run build:shared && concurrently -n shared,api,web -c gray,green,blue \"npm run dev -w @aba-mart/shared\" \"npm run dev -w @aba-mart/api\" \"npm run dev -w @aba-mart/web\"",
+    "dev:api": "npm run build:shared && npm run dev -w @aba-mart/api",
+    "dev:web": "npm run build:shared && npm run dev -w @aba-mart/web",
+    "build": "npm run build:shared && npm run build -w @aba-mart/api && npm run build -w @aba-mart/web",
+    "start:api": "npm run start -w @aba-mart/api",
+    "start:web": "npm run start -w @aba-mart/web",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run build:shared && npm run test --workspaces --if-present",
+    "create-admin": "npm run create-admin -w @aba-mart/api",
+    "seed:mock": "npm run seed:mock -w @aba-mart/api --"
   },
   "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.1",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "concurrently": "^10.0.6"
   }
 }

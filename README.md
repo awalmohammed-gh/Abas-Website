@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ABA Mart
 
-## Getting Started
+Multi-category online store for Ghana with **WhatsApp click-to-chat checkout**. Customers browse, build a cart and send a ready-written order to the store on WhatsApp. No account and no online payment is needed. Staff manage products, stock, orders, banners and settings in a secure admin portal.
 
-First, run the development server:
+| Part | Stack |
+| --- | --- |
+| `apps/web` | Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwind CSS 4, React Icons |
+| `apps/api` | Express 5, TypeScript, MongoDB + Mongoose 9, Zod 4, JWT (HTTP-only cookie), Cloudinary |
+| `packages/shared` | Shared types, Zod schemas, money / phone / WhatsApp helpers (no server code) |
+
+npm workspaces; one lockfile at the root.
+
+---
+
+## Quick start
+
+Requirements: Node.js 22.12+ (developed on Node 24), a MongoDB Atlas cluster (or any MongoDB replica set), and a Cloudinary account.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+
+cp apps/api/.env.example apps/api/.env          # fill in MongoDB, JWT, Cloudinary, admin
+cp apps/web/.env.example apps/web/.env.local    # API URL, site URL, revalidate secret
+
+npm run create-admin    # creates the first admin from ADMIN_EMAIL / ADMIN_PASSWORD in apps/api/.env
+npm run dev             # shared (watch) + API on :5000 + web on :3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Sign in at **http://localhost:3000/admin/login**.
+2. Check **Settings**. Customer orders go to the WhatsApp number there (pre-filled from `STORE_WHATSAPP_NUMBER`, currently +233 27 885 7814).
+3. Add or edit **categories** and **products** (images, prices, stock, variants).
+4. Optionally add homepage **banners**. Without banners the homepage shows a branded introduction.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Starter catalogue from `/data`
 
-## Learn More
+`npm run seed:mock` loads the mock clothing catalogue from `data/` into the database: 8 categories and 20 products. The product images are uploaded to Cloudinary.
 
-To learn more about Next.js, take a look at the following resources:
+- **Kept from the mock data:** price, discount price, sizes (as Size variants, with stock split across sizes) and bestseller (as "featured").
+- **Not imported:** mock ratings, review counts and orders, because orders must come from real customers.
+- **Corrected:** for `img12`–`img19` the mock names, categories and descriptions didn't match the photos, so the seed names them after what each photo shows. See `apps/api/src/scripts/mockCatalog.ts`.
+- **Safe to re-run:** existing products are left unchanged. `npm run seed:mock -- --remove` takes the starter catalogue out again (products already used in orders are archived, not deleted).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The storefront only ever shows what is in the database. With no products it shows empty states.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts (run from the repository root)
 
-## Deploy on Vercel
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Builds `shared`, then runs shared (watch), API and web together |
+| `npm run build` | Production build of shared, API (`apps/api/dist`) and web (`.next`) |
+| `npm run start:api` / `npm run start:web` | Run the production builds |
+| `npm run typecheck` | TypeScript checks for every workspace |
+| `npm run lint` | ESLint for API and web |
+| `npm test` | Shared unit tests and API integration tests (in-memory MongoDB replica set) |
+| `npm run create-admin` | Create an admin, or reset an existing admin's password (signs out their sessions) |
+| `npm run seed:mock` | Load the starter catalogue from `data/` (`-- --remove` to take it out again) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## How WhatsApp checkout works
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. The cart lives in the browser (`localStorage`, validated on read). It holds only display snapshots.
+2. On the cart page the API re-prices the cart (`POST /api/orders/quote`) so customers see current prices and stock.
+3. "Order via WhatsApp" collects name, phone, delivery or pickup, location and notes, validated in the browser and again on the server.
+4. `POST /api/orders/whatsapp` loads authoritative prices and stock, rejects unavailable or over-stock items, and saves a **WhatsApp Pending** order with a reference such as `ABA-000125`. It then builds the message and the `https://wa.me/<number>?text=<encoded>` link.
+5. The browser opens WhatsApp. Desktop opens a tab reserved during the click so pop-up blockers don't interfere. Phones hand off to the WhatsApp app. A success panel always offers **Open WhatsApp** and **Copy order message** as fallbacks.
+
+Safeguards:
+- **Duplicate submissions**: every checkout carries an idempotency key, so a retry returns the same order.
+- **Changed prices**: if the total changed since the customer last saw it, the API asks them to review the cart.
+- **Stock**: opening WhatsApp never changes stock, confirms the order or marks it paid.
+
+### Order statuses and inventory policy
+
+`WhatsApp Pending → Confirmed → Processing → Ready for Pickup / Out for Delivery → Completed` (any non-final status can become `Cancelled`).
+
+- Stock is deducted **once**, in a MongoDB transaction, when an admin first confirms the order. The confirmation fails cleanly if any item lacks stock, so stock never goes negative or partially deducts.
+- Cancelling a confirmed order returns its stock. Cancelling a pending order doesn't touch stock.
+- Repeating a status update is a no-op. Concurrent confirmations cannot oversell; this is covered by tests.
+- Each change is recorded in the order's status history with the admin and an optional note.
+
+## Security
+
+- Admin login uses bcrypt (12 rounds) and a JWT in an **HTTP-only** cookie scoped to `/api/admin`. `Secure` is set in production and `SameSite` is configurable. Sessions expire after `JWT_EXPIRES_IN_HOURS`.
+- Logout and password resets revoke all sessions server-side (token version).
+- **CSRF**: every state-changing admin request needs an `X-CSRF-Token` bound to the session. The token is kept in memory only, never in `localStorage`. Unsafe requests from origins outside `CLIENT_ORIGIN` are rejected.
+- CORS allowlist, Helmet headers, rate limits on login, checkout, quotes, uploads and the API overall, and a 100 KB JSON body limit.
+- Every admin route checks the session on the server. The dashboard's client-side gate is only for convenience.
+- Prices and totals from the browser are never trusted. Inputs are validated with Zod (shared schemas), and errors are returned as a consistent JSON shape without stack traces or raw database errors.
+- Uploads accept only JPEG, PNG, WebP or AVIF up to 5 MB. Each file is checked by its signature, not just its declared type. Only Cloudinary URLs from this account and folder are accepted on products, categories, banners and settings.
+- Admin pages send `noindex` (metadata and `X-Robots-Tag`) and are disallowed in `robots.txt`.
+- There is no public registration endpoint and no default admin account.
+
+## Data model (MongoDB)
+
+`Admin`, `Category`, `Product` (with variants), `Order` (snapshots of name, variant and unit price at order time), `Banner`, `Settings` (single document), `Counter` (order reference sequence).
+
+All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products are **archived** rather than deleted, so order history stays intact. A category can't be deleted while any product uses it; hide it instead.
+
+## Caching
+
+Storefront pages read the catalogue on the server with `"use cache"` and tags (`products`, `categories`, `banners`, `settings`). After any admin change the API calls `POST /api/revalidate` on the web app (shared `REVALIDATE_SECRET`), so changes appear immediately. Without that, cached pages refresh within about a minute.
+
+If the API is unreachable, failed reads are cached for seconds only and the page shows an honest "couldn't load" state, so the web app also **builds without the API running**.
+
+The cart quote and checkout always hit the API directly, so stock and prices are never served from a stale cache.
+
+## Deployment notes
+
+- **API** (Render, Railway, a VPS…): `npm run build -w @aba-mart/shared && npm run build -w @aba-mart/api`, then `npm run start:api`. Set `NODE_ENV=production` and `TRUST_PROXY=1` behind a proxy.
+- **Web** (Vercel or any Node host): build `apps/web` after `packages/shared`. Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET` and `CLOUDINARY_CLOUD_NAME`.
+- **Same parent domain** (e.g. `shop.example.com` and `api.example.com`): `COOKIE_SAME_SITE=lax`. **Different domains**: `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true`.
+- Add every storefront origin to the API's `CLIENT_ORIGIN`, comma-separated.
+- MongoDB must be a replica set (Atlas always is), because order confirmation uses transactions.
+
+## Known notes
+
+- `npm audit` reports 5 high-severity advisories, all in **dev-only lint tooling** (`eslint-config-next → fast-glob → micromatch → braces`). No patched version exists, and the only automatic "fix" downgrades to the Next 14 config. Nothing in the runtime apps is affected.
+- ESLint stays on v9 because Next's ESLint plugins (`react`, `import`, `jsx-a11y`) don't support ESLint 10 yet.
+- **`querySrv` / `queryTxt` errors (ECONNREFUSED or ETIMEOUT) when connecting to Atlas:** some networks block the DNS lookups that `mongodb+srv://` needs. Use Atlas's *standard* connection string instead (`mongodb://host1,host2,host3/?tls=true&authSource=admin&replicaSet=…`), which skips those lookups. `apps/api/.env` on this PC already uses it. Alternatively set `DNS_SERVERS=1.1.1.1,8.8.8.8`.
+- **Dev server reloading the page over and over:** stop it, delete `apps/web/.next`, and start it again. A leftover production build in that folder can confuse the dev file watcher.
+- The `type/` folder at the repo root contains older standalone type definitions. They're superseded by `packages/shared` and unused by the app; it is git-ignored and can be deleted.

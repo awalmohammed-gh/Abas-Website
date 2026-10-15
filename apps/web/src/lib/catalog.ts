@@ -1,0 +1,147 @@
+/**
+ * Server-side, cached reads of the public catalogue for storefront pages.
+ * Results are tagged so the API can invalidate them after admin changes
+ * (see app/api/revalidate). Failed reads are cached only briefly.
+ */
+import { cacheLife, cacheTag } from "next/cache";
+import type {
+  ApiResponse,
+  BannerDTO,
+  CategoryDTO,
+  Paginated,
+  ProductDTO,
+  ProductSort,
+  StoreSettingsDTO,
+} from "@aba-mart/shared";
+import { fallbackSettings } from "@/config/site";
+import { buildQuery } from "@/lib/utils";
+
+const SERVER_API_URL = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+
+type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number };
+
+async function fetchApi<T>(path: string): Promise<FetchResult<T>> {
+  try {
+    const res = await fetch(`${SERVER_API_URL}${path}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
+    if (!res.ok || !body?.success) return { ok: false, status: res.status };
+    return { ok: true, data: body.data };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
+/** Keeps successful results for minutes; failures expire quickly so the page recovers on its own. */
+function lifetimeFor(result: FetchResult<unknown>): void {
+  if (result.ok || result.status === 404) cacheLife("minutes");
+  else cacheLife("seconds");
+}
+
+/**
+ * Settings for <head> metadata. Unlike getSettings(), a failed read is still
+ * cached briefly (with default branding) so metadata never forces otherwise
+ * static pages to render at request time - e.g. when building while the API is offline.
+ */
+export async function getMetadataSettings(): Promise<StoreSettingsDTO> {
+  "use cache";
+  cacheTag("settings");
+  cacheLife("minutes");
+  const result = await fetchApi<StoreSettingsDTO>("/settings/public");
+  return result.ok ? result.data : fallbackSettings;
+}
+
+export async function getSettings(): Promise<StoreSettingsDTO> {
+  "use cache";
+  cacheTag("settings");
+  const result = await fetchApi<StoreSettingsDTO>("/settings/public");
+  lifetimeFor(result);
+  return result.ok ? result.data : fallbackSettings;
+}
+
+/** Active categories, or null when they could not be loaded. */
+export async function getCategories(): Promise<CategoryDTO[] | null> {
+  "use cache";
+  cacheTag("categories");
+  const result = await fetchApi<CategoryDTO[]>("/categories");
+  lifetimeFor(result);
+  return result.ok ? result.data : null;
+}
+
+export async function getBanners(): Promise<BannerDTO[]> {
+  "use cache";
+  cacheTag("banners");
+  const result = await fetchApi<BannerDTO[]>("/banners");
+  lifetimeFor(result);
+  return result.ok ? result.data : [];
+}
+
+export interface ProductQuery {
+  q?: string;
+  category?: string;
+  sort?: ProductSort;
+  availability?: "all" | "in-stock";
+  featured?: boolean;
+  onSale?: boolean;
+  exclude?: string;
+  page?: number;
+  limit?: number;
+}
+
+/** A page of visible products, or null when the catalogue could not be loaded. */
+export async function getProducts(query: ProductQuery = {}): Promise<Paginated<ProductDTO> | null> {
+  "use cache";
+  cacheTag("products");
+  const result = await fetchApi<Paginated<ProductDTO>>(
+    `/products${buildQuery({
+      q: query.q,
+      category: query.category,
+      sort: query.sort && query.sort !== "newest" ? query.sort : undefined,
+      availability: query.availability === "in-stock" ? "in-stock" : undefined,
+      featured: query.featured,
+      onSale: query.onSale,
+      exclude: query.exclude,
+      page: query.page && query.page > 1 ? query.page : undefined,
+      limit: query.limit,
+    })}`,
+  );
+  lifetimeFor(result);
+  return result.ok ? result.data : null;
+}
+
+export type ProductLookup =
+  | { status: "found"; product: ProductDTO; related: ProductDTO[] }
+  | { status: "not-found" }
+  | { status: "error" };
+
+export async function getProduct(slug: string): Promise<ProductLookup> {
+  "use cache";
+  cacheTag("products");
+  const result = await fetchApi<{ product: ProductDTO; related: ProductDTO[] }>(`/products/${encodeURIComponent(slug)}`);
+  lifetimeFor(result);
+  if (result.ok) return { status: "found", ...result.data };
+  return result.status === 404 || result.status === 400 ? { status: "not-found" } : { status: "error" };
+}
+
+export async function getCategory(slug: string): Promise<CategoryDTO | null | "error"> {
+  const categories = await getCategories();
+  if (!categories) return "error";
+  return categories.find((c) => c.slug === slug) ?? null;
+}
+
+/** Every visible product (paged through) for the sitemap. */
+export async function getAllProductsForSitemap(): Promise<ProductDTO[]> {
+  "use cache";
+  cacheTag("products");
+  cacheLife("hours");
+  const all: ProductDTO[] = [];
+  for (let page = 1; page <= 50; page++) {
+    const result = await fetchApi<Paginated<ProductDTO>>(`/products?limit=48&page=${page}`);
+    if (!result.ok) break;
+    all.push(...result.data.items);
+    if (page >= result.data.totalPages) break;
+  }
+  return all;
+}

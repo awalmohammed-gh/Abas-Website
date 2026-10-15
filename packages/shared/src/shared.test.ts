@@ -1,0 +1,193 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildOrderMessage,
+  buildWhatsAppUrl,
+  canTransitionOrder,
+  checkoutCustomerSchema,
+  discountPercent,
+  formatGHS,
+  linkSchema,
+  normalizePhoneNumber,
+  parseCedisToPesewas,
+  pesewasToInput,
+  productInputSchema,
+  resolvePrice,
+  slugify,
+} from "./index.js";
+
+describe("money", () => {
+  it("formats pesewas as GHS", () => {
+    expect(formatGHS(4500)).toBe("GHS 45.00");
+    expect(formatGHS(17000)).toBe("GHS 170.00");
+    expect(formatGHS(123456789)).toBe("GHS 1,234,567.89");
+    expect(formatGHS(5)).toBe("GHS 0.05");
+  });
+
+  it("parses cedi input without floating point drift", () => {
+    expect(parseCedisToPesewas("45")).toBe(4500);
+    expect(parseCedisToPesewas("45.5")).toBe(4550);
+    expect(parseCedisToPesewas("0.10")).toBe(10);
+    expect(parseCedisToPesewas("1,250.99")).toBe(125099);
+    expect(parseCedisToPesewas("19.99")).toBe(1999);
+    expect(parseCedisToPesewas("1.234")).toBeNull();
+    expect(parseCedisToPesewas("-4")).toBeNull();
+    expect(parseCedisToPesewas("abc")).toBeNull();
+  });
+
+  it("round-trips form values", () => {
+    expect(pesewasToInput(1999)).toBe("19.99");
+    expect(pesewasToInput(null)).toBe("");
+  });
+
+  it("computes discount percentages", () => {
+    expect(discountPercent(8000, 10000)).toBe(20);
+    expect(discountPercent(10000, 10000)).toBeNull();
+    expect(discountPercent(10000, null)).toBeNull();
+  });
+});
+
+describe("phone numbers", () => {
+  it("normalises Ghana numbers to international digits", () => {
+    expect(normalizePhoneNumber("024 123 4567")).toBe("233241234567");
+    expect(normalizePhoneNumber("+233 24 123 4567")).toBe("233241234567");
+    expect(normalizePhoneNumber("+233 024 123 4567")).toBe("233241234567");
+    expect(normalizePhoneNumber("00233241234567")).toBe("233241234567");
+    expect(normalizePhoneNumber("233-55-123-4567")).toBe("233551234567");
+  });
+
+  it("rejects invalid numbers", () => {
+    expect(normalizePhoneNumber("12345")).toBeNull();
+    expect(normalizePhoneNumber("024 123 456")).toBeNull();
+    expect(normalizePhoneNumber("+233 94 123 4567")).toBeNull();
+    expect(normalizePhoneNumber("call me")).toBeNull();
+  });
+
+  it("accepts international numbers with a country code", () => {
+    expect(normalizePhoneNumber("+44 7700 900123")).toBe("447700900123");
+  });
+});
+
+describe("WhatsApp", () => {
+  const message = buildOrderMessage({
+    storeName: "ABA Mart",
+    orderReference: "ABA-000125",
+    items: [
+      { name: "Dettol Shower Gel 500ml", quantity: 2, unitPrice: 4500, lineTotal: 9000 },
+      {
+        name: "Men's T-Shirt",
+        attributes: [
+          { name: "Size", value: "Large" },
+          { name: "Color", value: "Black" },
+        ],
+        quantity: 1,
+        unitPrice: 8000,
+        lineTotal: 8000,
+      },
+    ],
+    total: 17000,
+    customer: { name: "Ama Mensah", phone: "233241234567" },
+    fulfillmentMethod: "delivery",
+    deliveryLocation: "East Legon, Accra",
+    notes: "Call before delivery",
+  });
+
+  it("builds the order message from validated order data", () => {
+    expect(message).toContain("Hello ABA Mart,");
+    expect(message).toContain("Order Reference: ABA-000125");
+    expect(message).toContain("1. Dettol Shower Gel 500ml\nQuantity: 2\nUnit Price: GHS 45.00\nSubtotal: GHS 90.00");
+    expect(message).toContain("2. Men's T-Shirt\nSize: Large\nColor: Black\nQuantity: 1");
+    expect(message).toContain("Total: GHS 170.00");
+    expect(message).toContain("Phone: +233 24 123 4567");
+    expect(message).toContain("Delivery/Pickup: Delivery");
+    expect(message).toContain("Location: East Legon, Accra");
+    expect(message).toContain("Additional Notes: Call before delivery");
+    expect(message.trim().endsWith("Thank you.")).toBe(true);
+  });
+
+  it("encodes the click-to-chat URL", () => {
+    const url = buildWhatsAppUrl("233241234567", message);
+    expect(url.startsWith("https://wa.me/233241234567?text=")).toBe(true);
+    expect(decodeURIComponent(url.split("?text=")[1] ?? "")).toBe(message);
+    expect(url).not.toContain(" ");
+    expect(buildWhatsAppUrl("+233 24 123 4567")).toBe("https://wa.me/233241234567");
+  });
+});
+
+describe("schemas", () => {
+  const base = {
+    name: "Men's T-Shirt",
+    category: "64b7f0c2a1b2c3d4e5f60718",
+    price: 8000,
+  };
+
+  it("accepts a simple product", () => {
+    const result = productInputSchema.safeParse({ ...base, stock: 4 });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires the regular price to exceed the discount price", () => {
+    const result = productInputSchema.safeParse({ ...base, compareAtPrice: 8000 });
+    expect(result.success).toBe(false);
+  });
+
+  it("validates variants against options", () => {
+    const options = [{ name: "Size", values: ["M", "L"] }];
+    const ok = productInputSchema.safeParse({
+      ...base,
+      options,
+      variants: [{ attributes: [{ name: "Size", value: "M" }], stock: 3 }],
+    });
+    expect(ok.success).toBe(true);
+
+    const wrongValue = productInputSchema.safeParse({
+      ...base,
+      options,
+      variants: [{ attributes: [{ name: "Size", value: "XL" }], stock: 3 }],
+    });
+    expect(wrongValue.success).toBe(false);
+
+    const duplicate = productInputSchema.safeParse({
+      ...base,
+      options,
+      variants: [
+        { attributes: [{ name: "Size", value: "M" }], stock: 3 },
+        { attributes: [{ name: "Size", value: "M" }], stock: 1 },
+      ],
+    });
+    expect(duplicate.success).toBe(false);
+  });
+
+  it("requires a delivery location for delivery orders", () => {
+    const missing = checkoutCustomerSchema.safeParse({ name: "Ama", phone: "0241234567", fulfillmentMethod: "delivery" });
+    expect(missing.success).toBe(false);
+    const pickup = checkoutCustomerSchema.safeParse({ name: "Ama", phone: "0241234567", fulfillmentMethod: "pickup" });
+    expect(pickup.success).toBe(true);
+    if (pickup.success) expect(pickup.data.phone).toBe("233241234567");
+  });
+
+  it("blocks unsafe banner links", () => {
+    expect(linkSchema.safeParse("/shop").success).toBe(true);
+    expect(linkSchema.safeParse("https://example.com/sale").success).toBe(true);
+    expect(linkSchema.safeParse("javascript:alert(1)").success).toBe(false);
+    expect(linkSchema.safeParse("//evil.example").success).toBe(false);
+  });
+});
+
+describe("helpers", () => {
+  it("slugifies names", () => {
+    expect(slugify("Men's T-Shirt (Large)")).toBe("mens-t-shirt-large");
+    expect(slugify("Soaps & Body Wash")).toBe("soaps-and-body-wash");
+  });
+
+  it("resolves variant pricing", () => {
+    expect(resolvePrice({ price: 1000, compareAtPrice: 1500 })).toEqual({ price: 1000, compareAtPrice: 1500 });
+    expect(resolvePrice({ price: 1000, compareAtPrice: 1500 }, { price: 1200 })).toEqual({ price: 1200, compareAtPrice: null });
+    expect(resolvePrice({ price: 1000 }, { price: null })).toEqual({ price: 1000, compareAtPrice: null });
+  });
+
+  it("enforces the order status workflow", () => {
+    expect(canTransitionOrder("WhatsApp Pending", "Confirmed")).toBe(true);
+    expect(canTransitionOrder("WhatsApp Pending", "Completed")).toBe(false);
+    expect(canTransitionOrder("Completed", "Cancelled")).toBe(false);
+  });
+});

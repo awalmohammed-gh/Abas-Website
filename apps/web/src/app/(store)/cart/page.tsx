@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { CartView } from "@/components/cart/CartView";
+import { getSettings } from "@/lib/catalog";
+
+export const metadata: Metadata = {
+  title: "Your cart",
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/cart" },
+};
+
+async function CartLoader() {
+  const settings = await getSettings();
+  return <CartView whatsappEnabled={!!settings.whatsappNumber} />;
+}
+
+export default function CartPage() {
+  return (
+    <div className="container-page py-8 sm:py-12">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-3xl font-bold text-ink sm:text-4xl">Your cart</h1>
+        <p className="mt-2 text-muted">Review your items, then send your order to us on WhatsApp. No account or online payment needed.</p>
+      </header>
+      <Suspense
+        fallback={
+          <div className="grid gap-8 lg:grid-cols-[1fr_380px]" aria-hidden="true">
+            <div className="skeleton h-64" />
+            <div className="skeleton h-72" />
+          </div>
+        }
+      >
+        <CartLoader />
+      </Suspense>
+    </div>
+  );
+}
