@@ -22,17 +22,9 @@ function normalize(values: Environment): Environment {
   return result;
 }
 
-/** Deployment variables win, then market/.env, then API-only defaults. */
-export function resolveApiEnvironment(fallback: Environment, root: Environment, inherited: Environment): Environment {
-  const defaults = normalize(fallback);
-  const primary = normalize(root);
-  // A partial root credential pair must fail validation, never borrow a different
-  // account's password or ID from the legacy API defaults.
-  if (primary.ADMIN_EMAIL !== undefined || primary.ADMIN_PASSWORD !== undefined) {
-    delete defaults.ADMIN_EMAIL;
-    delete defaults.ADMIN_PASSWORD;
-  }
-  return { ...defaults, ...primary, ...normalize(inherited) };
+/** Deployment variables win over market/.env, the project's only env file. */
+export function resolveApiEnvironment(root: Environment, inherited: Environment): Environment {
+  return { ...normalize(root), ...normalize(inherited) };
 }
 
 function packageDirectory(name: string): string | null {
@@ -54,11 +46,7 @@ function readEnvironment(directory: string | null): Environment {
 export function loadApiEnvironment(): void {
   // Tests must never load real database, admin or signing credentials.
   if (process.env.NODE_ENV === "test") return;
-  const resolved = resolveApiEnvironment(
-    readEnvironment(packageDirectory("@aba-mart/api")),
-    readEnvironment(packageDirectory("aba-mart")),
-    process.env,
-  );
+  const resolved = resolveApiEnvironment(readEnvironment(packageDirectory("aba-mart")), process.env);
   // Windows preserves the first casing of an environment key. Remove aliases
   // first so enumeration exposes ADMIN_EMAIL to the case-sensitive schema.
   for (const alias of Object.keys(aliases)) delete process.env[alias];

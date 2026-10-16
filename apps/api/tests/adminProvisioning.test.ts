@@ -27,10 +27,9 @@ describe("environment administrator", () => {
     expect(environmentAdminSchema.safeParse({ ADMIN_EMAIL: credentials.email, ADMIN_PASSWORD: "short" }).success).toBe(false);
   });
 
-  it("uses root aliases ahead of API defaults, while deployment variables take priority", () => {
+  it("maps the older root names, while deployment variables take priority", () => {
     const resolved = resolveApiEnvironment(
-      { ADMIN_EMAIL: "old@test.example", JWT_SECRET: "old-key", MONGODB_URI: "mongodb://old/placeholder", CLIENT_ORIGIN: "http://localhost:3000" },
-      { admin_email: "owner@aba_mart.test", admin_psd: "root-password-42", jwt_key: "root-key", CLOUD_NAME: "root-cloud", CLOUD_API_KEY: "public-test-key", CLOUD_SECRET_KEY: "private-test-value", MONGODB_URI: "mongodb://root/placeholder" },
+      { admin_email: "owner@aba_mart.test", admin_psd: "root-password-42", jwt_key: "root-key", CLOUD_NAME: "root-cloud", CLOUD_API_KEY: "public-test-key", CLOUD_SECRET_KEY: "private-test-value", MONGODB_URI: "mongodb://root/placeholder", CLIENT_ORIGIN: "http://localhost:3000" },
       { JWT_SECRET: "deployment-key" },
     );
     expect(resolved).toMatchObject({ ADMIN_EMAIL: "owner@aba_mart.test", ADMIN_PASSWORD: "root-password-42", JWT_SECRET: "deployment-key", CLOUDINARY_CLOUD_NAME: "root-cloud", CLOUDINARY_API_KEY: "public-test-key", CLOUDINARY_API_SECRET: "private-test-value", MONGODB_URI: "mongodb://root/placeholder", CLIENT_ORIGIN: "http://localhost:3000" });
@@ -43,12 +42,6 @@ describe("environment administrator", () => {
     const configured = { ...credentials, email: "owner@aba_mart.test" };
     await synchronizeEnvironmentAdmin(configured);
     await request(app).post("/api/admin/auth/login").set("Origin", ORIGIN).send({ email: configured.email, password: configured.password }).expect(200);
-  });
-
-  it("does not combine a root admin ID with a legacy API password", () => {
-    const resolved = resolveApiEnvironment({ ADMIN_EMAIL: credentials.email, ADMIN_PASSWORD: credentials.password }, { admin_email: "root@aba_mart.test" }, {});
-    expect(resolved.ADMIN_PASSWORD).toBeUndefined();
-    expect(environmentAdminSchema.safeParse(resolved).success).toBe(false);
   });
 
   it("creates a hashed account from environment credentials that can sign in", async () => {

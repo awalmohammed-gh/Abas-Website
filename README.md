@@ -42,9 +42,7 @@ Requirements: Node.js 22.12+ (developed on Node 24), a MongoDB Atlas cluster (or
 ```bash
 npm install
 
-cp .env.example .env                           # primary MongoDB, Cloudinary, JWT and static admin credentials
-cp apps/api/.env.example apps/api/.env          # API settings: origins, cookies, revalidation, push
-cp apps/web/.env.example apps/web/.env.local    # API URL, site URL, revalidate secret
+cp .env.example .env    # the only env file: database, Cloudinary, admin, push and web settings
 
 npm run create-admin    # optional: applies the configured admin manually (also synchronized on API startup)
 npm run dev             # shared (watch) + API on :5000 + web on :3000
@@ -57,9 +55,9 @@ Then:
 3. Add or edit **categories** and **products** (images, prices, stock, variants).
 4. Optionally add homepage **banners**. Without banners the homepage shows a branded introduction.
 
-The API loads the real `.env` in `market`, in development and in the compiled server. It accepts the existing root names: `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_SECRET_KEY`, `jwt_key`, `admin_email`, and `admin_psd`; these map to the API's canonical settings. `MONGODB_URI` is read directly. Root values take priority over `apps/api/.env`, while explicitly supplied process/deployment variables take priority over both files. Tests never load either real file.
+`market/.env` is the only env file. The API loads it in development and in the compiled server, and the web app loads it from `next.config.ts` (except `PORT` and `NODE_ENV`, which belong to the API). Explicitly supplied process/deployment variables take priority over the file. The API also still accepts the older names `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_SECRET_KEY`, `jwt_key`, `admin_email`, and `admin_psd`, which map to the canonical settings. Tests never load the real file.
 
-`admin_email` and `admin_psd` define the static admin sign-in credentials. The ID is matched exactly after trimming and lowercasing; it need not be a deliverable email address. At startup, the API creates or synchronizes its MongoDB admin profile using a bcrypt password hash. Unchanged restarts keep existing sessions valid; password, role or account-status changes revoke prior sessions. Restart the API after changing the root `.env`. Neither the password nor signing key is returned to the browser or committed to Git.
+`ADMIN_EMAIL` and `ADMIN_PASSWORD` define the static admin sign-in credentials. The ID is matched exactly after trimming and lowercasing; it need not be a deliverable email address. At startup, the API creates or synchronizes its MongoDB admin profile using a bcrypt password hash. Unchanged restarts keep existing sessions valid; password, role or account-status changes revoke prior sessions. Restart the API after changing `.env`. Neither the password nor signing key is returned to the browser or committed to Git.
 
 ### Starter catalogue from `/data`
 
@@ -92,7 +90,7 @@ The storefront only ever shows what is in the database. With no products it show
 3. "Order via WhatsApp" collects name, phone, delivery or pickup, location and notes, validated in the browser and again on the server.
 4. `POST /api/orders/whatsapp` loads authoritative prices and stock, rejects unavailable or over-stock items, and saves a **WhatsApp Pending** order with a reference such as `ABA-000125`. It then builds the message and the `https://wa.me/<number>?text=<encoded>` click-to-chat link. No WhatsApp Business API, tokens or webhooks are involved.
 
-   The number comes from **Admin → Settings** (stored in MongoDB). `STORE_WHATSAPP_NUMBER` in `apps/api/.env` sets the initial value; otherwise first-time setup defaults to ABA Mart's `233278857814` (local `0278857814`). Existing saved settings remain authoritative.
+   The number comes from **Admin → Settings** (stored in MongoDB). `STORE_WHATSAPP_NUMBER` in `.env` sets the initial value; otherwise first-time setup defaults to ABA Mart's `233278857814` (local `0278857814`). Existing saved settings remain authoritative.
 5. The browser saves the prepared request and attempts to open WhatsApp in a tab reserved during the click. A blocked or closed tab leaves the cart untouched. After initiating the handoff, the browser calls `POST /api/my-orders/:id/handoff`; a transaction removes only that order's quantities from this session's cart. Repeating the handoff does not clear newly added items again. **Open WhatsApp**, **Copy order message**, and private history offer retries using the existing order.
 
 ### Private guest order history
@@ -164,7 +162,7 @@ No WebSockets, Socket.IO or WhatsApp API are used.
 
 Publishing with push queues a background delivery: batches of 200, 20 at a time, resumable after a restart. The admin sees targeted / accepted / failed counts. **Accepted** means the browser's push service took the message, not that a device displayed it. Subscriptions the push service reports as gone (404/410), or that fail 5 times in a row, are switched off and deleted 30 days later.
 
-Setup: generate keys once with `npx web-push generate-vapid-keys` and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `apps/api/.env` (the private key stays on the server; the browser gets the public key from `GET /api/push/config`). Without them, in-app notifications still work and push options are hidden. Web Push needs **HTTPS** in production (localhost is allowed). On iPhone and iPad, customers must add the store to the Home Screen first; the bell explains this. Private/incognito windows can't receive push.
+Setup: generate keys once with `npx web-push generate-vapid-keys` and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `.env` (the private key stays on the server; the browser gets the public key from `GET /api/push/config`). Without them, in-app notifications still work and push options are hidden. Web Push needs **HTTPS** in production (localhost is allowed). On iPhone and iPad, customers must add the store to the Home Screen first; the bell explains this. Private/incognito windows can't receive push.
 
 ## Animations
 
@@ -214,14 +212,14 @@ The cart quote and checkout always hit the API directly, so stock and prices are
 
 - In development, `GET /api/health` also reports `databaseName`, the database the API is actually connected to. This is hidden in production.
 - `/admin` checks the HTTP-only admin session before showing the dashboard. A missing or expired session redirects to `/admin/login`; network and server errors show a retry message. JSON API requests time out after 20 seconds (uploads allow 60 seconds), including response-body reads. The loading screen also has a direct sign-in link, available before JavaScript loads.
-- `npm run dev` runs the API with `tsx watch`, which restarts it on every file change using `apps/api/.env`. Stop it before running anything against a test database on the same port.
+- `npm run dev` runs the API with `tsx watch`, which restarts it on every file change using `market/.env`. Stop it before running anything against a test database on the same port.
 - Browser tests: Playwright's default (incognito-like) contexts can't use Web Push; use `launchPersistentContext` with a temporary profile. Run tests against the isolated stack (API `:5055` on `aba-mart-e2e`, web `:3055`), never the dev ports.
-- Open the store at `http://localhost:3000` or `http://127.0.0.1:3000`. For phone testing over Wi-Fi, add this PC's LAN IP to `ALLOWED_DEV_ORIGINS` in `apps/web/.env.local` and `http://<ip>:3000` to the API's `CLIENT_ORIGIN`, then restart `npm run dev`. Without this, Next.js blocks its dev scripts for that host and pages never finish loading (e.g. the admin stays on "Checking your session"). The browser calls the API on the same host the page was opened from, so port 5000 must also be reachable (allow Node.js through Windows Firewall).
+- Open the store at `http://localhost:3000` or `http://127.0.0.1:3000`. For phone testing over Wi-Fi, add this PC's LAN IP to `ALLOWED_DEV_ORIGINS` and `http://<ip>:3000` to `CLIENT_ORIGIN` in `.env`, then restart `npm run dev`. Without this, Next.js blocks its dev scripts for that host and pages never finish loading (e.g. the admin stays on "Checking your session"). The browser calls the API on the same host the page was opened from, so port 5000 must also be reachable (allow Node.js through Windows Firewall).
 
 ## Known notes
 
 - `npm audit` reports 5 high-severity advisories, all in **dev-only lint tooling** (`eslint-config-next → fast-glob → micromatch → braces`). No patched version exists, and the only automatic "fix" downgrades to the Next 14 config. Nothing in the runtime apps is affected.
 - ESLint stays on v9 because Next's ESLint plugins (`react`, `import`, `jsx-a11y`) don't support ESLint 10 yet.
-- **`querySrv` / `queryTxt` errors (ECONNREFUSED or ETIMEOUT) when connecting to Atlas:** some networks block the DNS lookups that `mongodb+srv://` needs. Use Atlas's *standard* connection string instead (`mongodb://host1,host2,host3/?tls=true&authSource=admin&replicaSet=…`), which skips those lookups. `apps/api/.env` on this PC already uses it. Alternatively set `DNS_SERVERS=1.1.1.1,8.8.8.8`.
+- **`querySrv` / `queryTxt` errors (ECONNREFUSED or ETIMEOUT) when connecting to Atlas:** some networks block the DNS lookups that `mongodb+srv://` needs. Use Atlas's *standard* connection string instead (`mongodb://host1,host2,host3/?tls=true&authSource=admin&replicaSet=…`), which skips those lookups. `.env` on this PC already uses it. Alternatively set `DNS_SERVERS=1.1.1.1,8.8.8.8`.
 - **Dev server reloading the page over and over:** stop it, delete `apps/web/.next`, and start it again. A leftover production build in that folder can confuse the dev file watcher.
 - The `type/` folder at the repo root contains older standalone type definitions. They're superseded by `packages/shared` and unused by the app; it is git-ignored and can be deleted.

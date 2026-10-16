@@ -1,4 +1,16 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parseEnv } from "node:util";
 import type { NextConfig } from "next";
+
+// market/.env is the project's only env file; the API reads it too. Variables set by
+// the host win, and PORT/NODE_ENV belong to the API (Next.js sets its own).
+const sharedEnvFile = join(__dirname, "../../.env");
+if (existsSync(sharedEnvFile)) {
+  for (const [key, value] of Object.entries(parseEnv(readFileSync(sharedEnvFile, "utf8")))) {
+    if (value && process.env[key] === undefined && key !== "PORT" && key !== "NODE_ENV") process.env[key] = value;
+  }
+}
 
 // Only images from this store's Cloudinary account may be optimised.
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;

@@ -111,7 +111,7 @@ const parsed = envSchema.safeParse(raw);
 
 if (!parsed.success) {
   const problems = parsed.error.issues.map((issue) => `  - ${issue.path.join(".") || "env"}: ${issue.message}`);
-  throw new Error(`Invalid environment configuration:\n${problems.join("\n")}\nSee apps/api/.env.example.`);
+  throw new Error(`Invalid environment configuration:\n${problems.join("\n")}\nSee market/.env.example.`);
 }
 
 const data = parsed.data;

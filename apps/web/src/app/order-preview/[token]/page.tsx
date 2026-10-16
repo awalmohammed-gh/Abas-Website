@@ -8,7 +8,7 @@ import { Logo } from "@/components/brand/Logo";
 import { OrderPreview } from "@/components/orders/OrderPreview";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getMetadataSettings } from "@/lib/catalog";
+import { getMetadataSettings, SERVER_API_URL } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Order product preview",
@@ -21,10 +21,9 @@ async function PreviewContent({ params }: { params: Promise<{ token: string }> }
   await connection();
   const { token } = await params;
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) notFound();
-  const api = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
   let response: Response;
   try {
-    response = await fetch(`${api}/orders/preview/${token}`, { cache: "no-store", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
+    response = await fetch(`${SERVER_API_URL}/orders/preview/${token}`, { cache: "no-store", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
   } catch {
     return <EmptyState icon={<FiLink />} title="We couldn’t load this preview" description="Please refresh in a moment. The order request is still saved." />;
   }

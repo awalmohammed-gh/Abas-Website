@@ -16,7 +16,8 @@ import type {
 import { fallbackSettings } from "@/config/site";
 import { buildQuery } from "@/lib/utils";
 
-const SERVER_API_URL = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+/** API base URL for server-side requests (prefers the private network URL). */
+export const SERVER_API_URL = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
 
 type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number };
 
