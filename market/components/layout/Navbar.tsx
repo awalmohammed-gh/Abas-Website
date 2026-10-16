@@ -153,17 +153,6 @@ export function Navbar({ storeName, logo, whatsappNumber, supportMessage, suppor
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="container-page flex min-h-[76px] items-center gap-3 py-3 lg:min-h-[88px] lg:gap-6 lg:py-4">
-        <button
-          type="button"
-          className="-ml-2 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Open menu"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-menu"
-        >
-          <FiMenu className="size-6" />
-        </button>
-
         <Link href="/" className="min-w-0 shrink" aria-label={`${storeName} home`}>
           <Logo storeName={storeName} logo={logo} />
         </Link>
@@ -235,6 +224,18 @@ export function Navbar({ storeName, logo, whatsappNumber, supportMessage, suppor
               </span>
             )}
           </Link>
+
+          {/* Phones and tablets: the menu sits at the far right, so the logo stands alone on the left. */}
+          <button
+            type="button"
+            className="-mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+          >
+            <FiMenu className="size-6" />
+          </button>
         </div>
       </div>
 

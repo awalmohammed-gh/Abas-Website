@@ -76,7 +76,7 @@ export function CategoriesView() {
         ) : data ? (
           <ul className="divide-y divide-line">
             {data.map((category) => (
-              <li key={category.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:px-5">
+              <li key={category.id} className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex sm:px-5">
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-xl border border-line bg-cream-200">
                   {category.image ? (
                     <Image src={category.image.url} alt="" fill sizes="56px" className="object-cover" />
@@ -85,13 +85,14 @@ export function CategoriesView() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-ink">{category.name}</p>
+                  <p className="break-words font-semibold text-ink">{category.name}</p>
                   <p className="truncate text-xs text-muted">
                     /categories/{category.slug} · {category.productCount ?? 0} product{category.productCount === 1 ? "" : "s"} · order {category.displayOrder}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {category.isActive ? <Badge tone="success">Visible</Badge> : <Badge>Hidden</Badge>}
+                {/* Phones: actions sit on their own row under the name, so the name keeps its full width. */}
+                <div className="col-start-2 flex items-center gap-2">
+                  {category.isActive ? <Badge tone="success" className="mr-auto sm:mr-0">Visible</Badge> : <Badge className="mr-auto sm:mr-0">Hidden</Badge>}
                   <button type="button" className={iconButton} onClick={() => setEditing(category)} aria-label={`Edit ${category.name}`} title="Edit">
                     <FiEdit2 className="size-4" />
                   </button>
