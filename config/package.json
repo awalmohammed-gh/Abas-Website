@@ -1,5 +1,8 @@
 {
   "private": true,
   "type": "module",
-  "description": "Server-side MongoDB and Cloudinary configuration shared by the ABA Mart API"
+  "description": "Server-side MongoDB and Cloudinary configuration shared by the ABA Mart API",
+  "devDependencies": {
+    "@types/node": "^26.6.5"
+  }
 }

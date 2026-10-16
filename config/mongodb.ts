@@ -2,7 +2,7 @@
  * MongoDB connection for ABA Mart: the single place the connection is opened.
  * The API passes in values from its validated environment (apps/api/src/config/env.ts).
  */
-import dns from "node:dns";
+import { setServers } from "node:dns";
 import mongoose from "mongoose";
 
 export interface MongoDBOptions {
@@ -24,7 +24,7 @@ export async function connectMongoDB({ uri, dbName, dnsServers, log = true }: Mo
   const { connection } = mongoose;
   if (connection.readyState === mongoose.ConnectionStates.connected && connection.name === dbName) return mongoose;
 
-  if (dnsServers?.length) dns.setServers(dnsServers);
+  if (dnsServers?.length) setServers(dnsServers);
   await mongoose.connect(uri, {
     dbName,
     serverSelectionTimeoutMS: 15_000,

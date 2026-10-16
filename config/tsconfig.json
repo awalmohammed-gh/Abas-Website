@@ -1,0 +1,9 @@
+{
+  "extends": "../apps/api/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "typeRoots": ["../node_modules/@types"]
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules"]
+}
