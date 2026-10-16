@@ -22,6 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/utils";
 import { OrderStatusBadge } from "./AdminUI";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 function stockEffect(order: OrderDTO, next: OrderStatus): string | null {
   if (STOCK_DEDUCTING_STATUSES.includes(next) && !order.inventoryAdjusted) return "Stock for these items will be deducted now.";
@@ -53,7 +54,7 @@ export function OrderDetails({ order, storeName, onClose, onUpdated }: OrderDeta
 
   async function updateStatus() {
     if (!next) return;
-    if (next === "Cancelled" && !window.confirm(`Cancel order ${order.orderReference}?`)) return;
+    if (next === "Cancelled" && !(await confirm({ title: `Cancel order ${order.orderReference}?`, description: "The order will be marked as Cancelled.", confirmLabel: "Cancel order", cancelLabel: "Keep order", tone: "danger" }))) return;
     setSaving(true);
     try {
       const result = await api.patch<{ order: OrderDTO; changed: boolean }>(`/admin/orders/${order.id}/status`, { status: next, note });

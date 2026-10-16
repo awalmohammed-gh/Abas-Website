@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { cartStore } from "@/contexts/cartStore";
 import { errorMessage } from "@/lib/api";
 import { acceptGuestSession, GUEST_CHANGED_EVENT, guestApi } from "@/lib/guest-api";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 export function GuestPrivacy({ onChanged }: { onChanged: () => void }) {
   const [token, setToken] = useState("");
@@ -29,7 +30,7 @@ export function GuestPrivacy({ onChanged }: { onChanged: () => void }) {
   }, []);
 
   async function action(kind: "save" | "recover" | "reset") {
-    if (kind === "reset" && !window.confirm("Start a fresh guest visit? Your cart and previous orders will be hidden on this browser. Save a recovery code first if you want to return to them.")) return;
+    if (kind === "reset" && !(await confirm({ title: "Start a fresh guest visit?", description: "Your cart and previous orders will be hidden on this browser. Save a recovery code first if you want to return to them.", confirmLabel: "Start fresh", tone: "danger" }))) return;
     setBusy(true);
     setError(null);
     setMessage(null);

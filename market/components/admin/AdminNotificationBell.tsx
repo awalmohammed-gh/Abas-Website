@@ -12,6 +12,7 @@ import { useAdminSession } from "./AdminSession";
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { OrderStatusBadge } from "./AdminUI";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 export const ADMIN_NOTIFICATIONS_CHANGED = "aba:admin-notifications-changed";
 
@@ -95,13 +96,15 @@ export function AdminNotificationBell() {
   const unread = summary?.unreadCount ?? 0;
 
   async function deleteAlerts(all = false) {
-    if (all && !window.confirm("Delete all admin order alerts? Order records will be kept.")) return;
+    if (all && !(await confirm({ title: "Delete all order alerts?", description: "Order records will be kept.", confirmLabel: "Delete all", tone: "danger" }))) return;
+    const count = selectedIds.length;
     setDeleting(true);
     try {
       await api.post("/admin/notifications/delete", all ? { all: true, scope: "alerts" } : { ids: selectedIds, scope: "alerts" });
       setSelected([]);
       await load();
       window.dispatchEvent(new Event(ADMIN_NOTIFICATIONS_CHANGED));
+      toast.success(all ? "All order alerts deleted." : `${count} alert${count === 1 ? "" : "s"} deleted.`);
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {

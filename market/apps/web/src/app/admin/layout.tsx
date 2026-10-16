@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ToastProvider } from "@/components/ui/Toast";
 import { getMetadataSettings } from "@/lib/catalog";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,5 +11,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  return <ToastProvider>{children}</ToastProvider>;
+  return children;
 }

@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminResource } from "@/hooks/useAdminResource";
 import { api, errorMessage } from "@/lib/api";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 export function CategoriesView() {
   const toast = useToast();
@@ -33,7 +34,7 @@ export function CategoriesView() {
   }
 
   async function remove(category: CategoryDTO) {
-    if (!window.confirm(`Delete the "${category.name}" category? This cannot be undone.`)) return;
+    if (!(await confirm({ title: `Delete the "${category.name}" category?`, description: "This cannot be undone.", tone: "danger" }))) return;
     setBusyId(category.id);
     try {
       await api.delete(`/admin/categories/${category.id}`);

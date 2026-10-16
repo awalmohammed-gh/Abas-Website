@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAdminResource } from "@/hooks/useAdminResource";
 import { api, errorMessage } from "@/lib/api";
 import { BannerForm } from "@/components/admin/BannerForm";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 export function BannersView() {
   const toast = useToast();
@@ -113,8 +114,9 @@ export function BannersView() {
                     type="button"
                     className={`${iconButton} hover:bg-danger-50 hover:text-danger`}
                     disabled={busy}
-                    onClick={() => {
-                      if (window.confirm(`Delete the banner "${banner.title}"?`)) void run(() => api.delete(`/admin/banners/${banner.id}`), "Banner deleted");
+                    onClick={async () => {
+                      const ok = await confirm({ title: `Delete the banner "${banner.title}"?`, description: "It disappears from the homepage straight away. This cannot be undone.", tone: "danger" });
+                      if (ok) void run(() => api.delete(`/admin/banners/${banner.id}`), "Banner deleted");
                     }}
                     aria-label={`Delete ${banner.title}`}
                     title="Delete"

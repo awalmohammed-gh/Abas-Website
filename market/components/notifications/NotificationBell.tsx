@@ -10,6 +10,8 @@ import { useNotifications } from "@/contexts/NotificationsContext";
 import { cn } from "@/lib/utils";
 import { errorMessage } from "@/lib/api";
 import { formatDateTime, formatRelativeTime } from "@/lib/time";
+import { confirm } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/Toast";
 
 const TYPE_ICONS: Record<CustomerNotificationType, IconType> = {
   new_product: FiPackage,
@@ -117,12 +119,13 @@ export function NotificationBell({ storeName }: { storeName: string }) {
   const allSelected = items.length > 0 && selectedIds.length === items.length;
 
   async function remove(all = false) {
-    if (all && !window.confirm("Delete all notifications from your inbox? This only clears your own notifications.")) return;
+    if (all && !(await confirm({ title: "Delete all notifications?", description: "This only clears your own inbox.", confirmLabel: "Delete all", tone: "danger" }))) return;
     setDeleting(true);
     setDeleteError(null);
     try {
       await deleteNotifications(all ? "all" : selectedIds);
       setSelected([]);
+      toast.success(all ? "Your inbox is clear." : "Notifications deleted.");
     } catch (cause) {
       setDeleteError(errorMessage(cause));
     } finally {

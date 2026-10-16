@@ -13,6 +13,7 @@ import { useAdminResource } from "@/hooks/useAdminResource";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api, errorMessage } from "@/lib/api";
 import { buildQuery } from "@/lib/utils";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 type Status = "all" | "active" | "inactive" | "archived";
 type StockFilter = "all" | "in" | "low" | "out";
@@ -50,7 +51,7 @@ function ProductsContent() {
   }
 
   async function archive(product: AdminProductDTO) {
-    if (!window.confirm(`Archive "${product.name}"? It will be removed from the store but kept for order history. You can restore it later.`)) return;
+    if (!(await confirm({ title: `Archive "${product.name}"?`, description: "It will be removed from the store but kept for order history. You can restore it later.", confirmLabel: "Archive", tone: "danger" }))) return;
     setBusyId(product.id);
     try {
       await api.delete(`/admin/products/${product.id}`);

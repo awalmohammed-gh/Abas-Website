@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Inter } from "next/font/google";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Toaster } from "@/components/ui/Toast";
 import { siteConfig } from "@/config/site";
 import { getMetadataSettings } from "@/lib/catalog";
 import "./globals.css";
@@ -38,7 +40,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en-GH" className={`${inter.variable} ${dmSans.variable} antialiased`}>
-      <body className="flex min-h-dvh min-w-0 flex-col">{children}</body>
+      <body className="flex min-h-dvh min-w-0 flex-col">
+        {children}
+        <Toaster />
+        <ConfirmDialog />
+      </body>
     </html>
   );
 }

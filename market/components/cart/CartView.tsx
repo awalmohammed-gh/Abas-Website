@@ -15,6 +15,8 @@ import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
 import { saveLastOrder, useLastOrder, type LastOrder } from "./lastOrderStore";
 import { WhatsAppCheckout } from "./WhatsAppCheckout";
+import { confirm } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/components/ui/Toast";
 
 function OrderSent({ order }: { order: LastOrder }) {
   const [copied, setCopied] = useState(false);
@@ -159,8 +161,9 @@ export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled:
               setNotice(null);
               setCheckoutOpen(true);
             }}
-            onClear={() => {
-              if (window.confirm("Remove all items from your cart?")) void clear().catch(() => undefined);
+            onClear={async () => {
+              if (!(await confirm({ title: "Remove all items from your cart?", confirmLabel: "Remove all", tone: "danger" }))) return;
+              void clear().then(() => toast.success("Your cart is now empty."), () => undefined);
             }}
           />
         </div>

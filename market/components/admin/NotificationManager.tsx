@@ -16,6 +16,7 @@ import { broadcastStoreEvent } from "@/lib/storeChannel";
 import { useAdminSession } from "./AdminSession";
 import { ADMIN_NOTIFICATIONS_CHANGED } from "./AdminNotificationBell";
 import { ErrorBlock, FilterTabs, LoadingBlock, OrderStatusBadge, SimplePagination } from "./AdminUI";
+import { confirm } from "@/components/ui/ConfirmDialog";
 
 export type NotificationScope = "all" | "alerts" | "customer";
 
@@ -67,8 +68,8 @@ function NotificationRow({ n, onChanged, checked, onSelect, selectionBusy, canMa
   const isSystem = isAlert || n.audience === "customer";
 
   async function act(action: "publish" | "end" | "delete" | "read") {
-    if (action === "delete" && !window.confirm(`Delete “${n.title}”? Customers will no longer see it.`)) return;
-    if (action === "publish" && !window.confirm(`Publish “${n.title}” to customers now?${n.sendPush ? " Push alerts will be sent." : ""}`)) return;
+    if (action === "delete" && !(await confirm({ title: `Delete “${n.title}”?`, description: "Customers will no longer see it.", tone: "danger" }))) return;
+    if (action === "publish" && !(await confirm({ title: `Publish “${n.title}” now?`, description: `Customers see it straight away.${n.sendPush ? " Push alerts will be sent." : ""}`, confirmLabel: "Publish" }))) return;
     setBusy(action);
     try {
       if (action === "publish") await api.post(`/admin/notifications/${n.id}/publish`);
@@ -166,7 +167,12 @@ export function NotificationManager({ initialScope = "all", refreshKey = 0, limi
   const selectedCount = selection.all ? list.data?.total ?? 0 : selectedIds.length;
 
   async function deleteSelected() {
-    if (!window.confirm(`Delete ${selection.all ? "all notifications in this filter" : `${selectedCount} selected notifications`}? This removes them from customer feeds too. Notifications still being sent will be kept.`)) return;
+    const ok = await confirm({
+      title: `Delete ${selection.all ? "all notifications in this filter" : `${selectedCount} selected notification${selectedCount === 1 ? "" : "s"}`}?`,
+      description: "This removes them from customer feeds too. Notifications still being sent will be kept.",
+      tone: "danger",
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       const result = await api.post<{ deleted: number; skipped: number }>("/admin/notifications/delete", selection.all ? { all: true, scope } : { ids: selectedIds, scope });
