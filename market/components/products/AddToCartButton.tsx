@@ -1,8 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FiCheck, FiShoppingBag } from "react-icons/fi";
+import { FiCheck, FiPlus, FiShoppingBag } from "react-icons/fi";
 import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
+import { toast } from "@/components/ui/Toast";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 import type { CartLineInput } from "@/types/cart";
@@ -15,9 +18,12 @@ interface AddToCartButtonProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   label?: string;
+  /** Round icon-only "quick add" for product cards; confirms with a toast instead of inline text. */
+  compact?: boolean;
 }
 
-export function AddToCartButton({ line, quantity = 1, disabled, className, size = "sm", label = "Add to cart" }: AddToCartButtonProps) {
+export function AddToCartButton({ line, quantity = 1, disabled, className, size = "sm", label = "Add to cart", compact = false }: AddToCartButtonProps) {
+  const router = useRouter();
   const { addItem, lines, hydrated, pending } = useCart();
   const [added, setAdded] = useState(false);
   // Shows a spinner the moment the button is pressed, before the server confirms.
@@ -36,11 +42,40 @@ export function AddToCartButton({ line, quantity = 1, disabled, className, size 
       setAdded(true);
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => setAdded(false), 1800);
+      if (compact) toast.success(`${line.name} added to your cart`, { action: { label: "View cart", onClick: () => router.push("/cart") } });
     } catch (cause) {
-      setError(errorMessage(cause));
+      if (compact) toast.error(errorMessage(cause));
+      else setError(errorMessage(cause));
     } finally {
       setAdding(false);
     }
+  }
+
+  if (compact) {
+    const blocked = disabled || atLimit;
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={blocked || adding || !hydrated || pending}
+        aria-label={atLimit && !disabled ? `${line.name}: all available stock is in your cart` : `Add ${line.name} to cart`}
+        title={atLimit && !disabled ? "All available stock is in your cart" : "Add to cart"}
+        className={cn(
+          "inline-flex size-11 items-center justify-center rounded-full bg-white text-brand-deep shadow-pop ring-1 ring-black/5 transition-[background-color,color,scale] duration-200",
+          "hover:bg-brand hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-white disabled:hover:text-brand-deep",
+          added && "bg-brand text-white disabled:hover:bg-brand disabled:hover:text-white",
+          className,
+        )}
+      >
+        {adding ? (
+          <Spinner className="text-current" label={`Adding ${line.name}`} />
+        ) : added ? (
+          <FiCheck className="size-5 animate-pop-in" aria-hidden="true" />
+        ) : (
+          <FiPlus className="size-5" aria-hidden="true" />
+        )}
+      </button>
+    );
   }
 
   return (

@@ -4,6 +4,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getCategories, getProducts } from "@/lib/catalog";
 import { buildQuery, firstParam } from "@/lib/utils";
+import { CategoryChips } from "./CategoryChips";
 import { Pagination } from "./Pagination";
 import { ProductFilters, type FilterValues } from "./ProductFilters";
 import { ProductGrid } from "./ProductGrid";
@@ -59,14 +60,25 @@ export async function ProductListing({ searchParams, category }: ProductListingP
       page: page > 1 ? page : undefined,
     })}`;
 
+  /** Shop URL for a category chip: keeps search, sort and availability, starts at page 1. */
+  const categoryHref = (slug: string) =>
+    `/shop${buildQuery({
+      q: filters.q,
+      category: slug || undefined,
+      sort: filters.sort === "newest" ? undefined : filters.sort,
+      availability: filters.availability === "in-stock" ? "in-stock" : undefined,
+    })}`;
+
   const hasFilters = !!filters.q || filters.availability === "in-stock" || (!category && !!filters.category);
+  const activeCategoryName = category ? undefined : categories?.find((c) => c.slug === filters.category)?.name;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
+      {!category && categories && <CategoryChips categories={categories} active={filters.category} hrefFor={categoryHref} />}
       <ProductFilters
         basePath={basePath}
         values={{ ...filters, category: category ? category.slug : filters.category }}
-        categories={category ? undefined : (categories ?? []).map((c) => ({ name: c.name, slug: c.slug }))}
+        categoryLabel={activeCategoryName ?? (filters.category || undefined)}
         total={result?.total ?? null}
       />
 

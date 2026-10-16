@@ -22,9 +22,9 @@ function pageWindow(page: number, total: number): (number | "gap")[] {
 
 export function Pagination({ page, totalPages, hrefFor }: PaginationProps) {
   if (totalPages <= 1) return null;
-  const base = "inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm font-medium";
+  const base = "inline-flex h-10 min-w-10 items-center justify-center rounded-full border px-3 text-sm font-medium tabular-nums transition-colors duration-200";
   return (
-    <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-1.5">
+    <nav aria-label="Pagination" className="mt-12 flex items-center justify-center gap-1.5">
       {page > 1 ? (
         <Link href={hrefFor(page - 1)} className={cn(base, "border-line bg-white hover:border-brand")} aria-label="Previous page">
           <FiChevronLeft className="size-4" />

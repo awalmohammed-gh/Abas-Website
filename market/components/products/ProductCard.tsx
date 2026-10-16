@@ -1,13 +1,18 @@
 import Link from "next/link";
-import { FiArrowRight, FiEye } from "react-icons/fi";
+import { FiArrowUpRight } from "react-icons/fi";
 import { discountPercent, priceRange, type ProductDTO } from "@aba-mart/shared";
-import { ButtonLink } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { AddToCartButton } from "./AddToCartButton";
 import { PriceTag } from "./PriceTag";
 import { ProductImage } from "./ProductImage";
-import { StockStatus } from "./StockStatus";
 
+const LOW_STOCK = 5;
+const SIZES = "(min-width: 1280px) 300px, (min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw";
+
+/**
+ * Image-first product card. The title link stretches over the whole card, so the card has a
+ * single link; quick add (or "choose options" for products with variants) sits above it.
+ */
 export function ProductCard({ product, priority = false }: { product: ProductDTO; priority?: boolean }) {
   const href = `/products/${product.slug}`;
   const hasVariants = product.variants.length > 0;
@@ -17,63 +22,82 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
   const compareAtPrice = uniformPrice ? product.compareAtPrice : null;
   const discount = discountPercent(product.price, compareAtPrice);
   const soldOut = !product.inStock;
+  const lowStock = !soldOut && product.stock <= LOW_STOCK;
+  const [image, hoverImage] = product.images;
+  const label = product.subCategory || product.category?.name;
 
   return (
-    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card">
-      <Link href={href} className="relative block aspect-square overflow-hidden bg-cream-200" tabIndex={-1} aria-hidden="true">
+    <article className="group relative flex h-full min-w-0 flex-col">
+      <div className="relative aspect-4/5 overflow-hidden rounded-2xl bg-cream-200">
         <ProductImage
-          src={product.images[0]?.url}
-          alt={product.images[0]?.alt || product.name}
-          sizes="(min-width: 1280px) 290px, (min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw"
+          src={image?.url}
+          alt={image?.alt || product.name}
+          sizes={SIZES}
           priority={priority}
-          className={cn("transition-[scale] duration-500 ease-out-soft group-hover:scale-[1.04]", soldOut && "opacity-60 grayscale-35")}
+          className={cn("transition-[scale,opacity] duration-700 ease-out-soft group-hover:scale-[1.04]", soldOut && "opacity-60 grayscale-35", hoverImage && "group-hover:opacity-0")}
         />
-        <div className="absolute left-2 top-2 flex flex-col gap-1">
-          {discount && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-brand-deep">-{discount}%</span>}
-          {soldOut && <span className="rounded-full bg-ink/80 px-2 py-0.5 text-[11px] font-semibold text-white">Sold out</span>}
-        </div>
-      </Link>
-
-      <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-        {(product.subCategory || product.category) && (
-          <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{product.subCategory || product.category?.name}</p>
+        {hoverImage && (
+          <ProductImage
+            src={hoverImage.url}
+            alt=""
+            sizes={SIZES}
+            className="opacity-0 transition-opacity duration-700 ease-out-soft group-hover:opacity-100"
+          />
         )}
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-[15px]">
-          <Link href={href} className="transition-colors duration-200 hover:text-brand">
-            {product.name}
-          </Link>
-        </h3>
-        <div className="mt-auto space-y-1">
-          <PriceTag price={range.min} maxPrice={range.max} compareAtPrice={compareAtPrice} />
-          <StockStatus stock={product.stock} />
+
+        <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
+          {discount && <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold leading-none text-brand-deep shadow-sm">-{discount}%</span>}
+          {soldOut && <span className="rounded-full bg-ink/85 px-2.5 py-1 text-[11px] font-semibold leading-none text-white">Sold out</span>}
         </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          {hasVariants ? (
-            <ButtonLink href={href} size="sm" className="min-w-24 flex-1" variant={soldOut ? "secondary" : "primary"} rightIcon={<FiArrowRight className="size-4" aria-hidden="true" />}>
-              Options
-            </ButtonLink>
-          ) : (
-            <div className="min-w-24 max-w-full flex-1">
+
+        {!soldOut && (
+          <div
+            className={cn(
+              "absolute bottom-2.5 right-2.5 z-10 transition-[opacity,translate] duration-300 ease-out-soft",
+              // Revealed on hover/focus with a mouse; always shown on touch screens.
+              "[@media(hover:hover)]:translate-y-1 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:translate-y-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:translate-y-0 [@media(hover:hover)]:group-hover:opacity-100",
+            )}
+          >
+            {hasVariants ? (
+              <Link
+                href={href}
+                aria-label={`Choose options for ${product.name}`}
+                title="Choose options"
+                className="inline-flex size-11 items-center justify-center rounded-full bg-white text-brand-deep shadow-pop ring-1 ring-black/5 transition-colors duration-200 hover:bg-brand hover:text-white"
+              >
+                <FiArrowUpRight className="size-5" aria-hidden="true" />
+              </Link>
+            ) : (
               <AddToCartButton
-                disabled={soldOut}
-                label={soldOut ? "Sold out" : "Add"}
+                compact
                 line={{
                   productId: product.id,
                   variantId: null,
                   slug: product.slug,
                   name: product.name,
-                  image: product.images[0]?.url ?? null,
+                  image: image?.url ?? null,
                   attributes: [],
                   unitPrice: product.price,
                   compareAtPrice: product.compareAtPrice,
                   maxQuantity: product.stock,
                 }}
               />
-            </div>
-          )}
-          <ButtonLink href={href} size="icon" variant="secondary" className="size-9 rounded-lg" aria-label={`View details for ${product.name}`}>
-            <FiEye className="size-4" aria-hidden="true" />
-          </ButtonLink>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-1 px-0.5 pt-3">
+        {label && <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>}
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-ink sm:text-[15px]">
+          <Link href={href} className="transition-colors duration-200 before:absolute before:inset-0 before:rounded-2xl group-hover:text-brand focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-offset-4 focus-visible:before:outline-brand">
+            {product.name}
+          </Link>
+        </h3>
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1">
+          <PriceTag price={range.min} maxPrice={range.max} compareAtPrice={compareAtPrice} />
+          {lowStock && <span className="text-xs font-medium text-accent-700">Only {product.stock} left</span>}
+          {soldOut && <span className="text-xs font-medium text-muted">Out of stock</span>}
         </div>
       </div>
     </article>
