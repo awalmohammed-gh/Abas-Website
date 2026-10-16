@@ -1,22 +1,25 @@
 /**
- * Serverless entry for Vercel. The web app's /api/[...path] route forwards each request
- * here, so the storefront and API share one origin and the session cookies stay
- * first-party. The request is injected into Express in-process (no network hop). A warm
- * instance reuses the app and the MongoDB connection; server.ts remains the entry for a
- * long-running server.
+ * Entry for the `api` service on Vercel (see market/vercel.json). Vercel routes public
+ * /api/* requests here with the original path, so the routes in app.ts match unchanged.
+ * A warm instance reuses the app and the MongoDB connection; server.ts remains the entry
+ * for a long-running server.
  */
-import type { Express } from "express";
-import { inject } from "light-my-request";
+import express, { type Express } from "express";
 
-/** Defaults derived from the deployment's production URL; explicit variables win. */
+/** Defaults for a Vercel deployment; explicitly set variables win. */
 function applyVercelDefaults(): void {
-  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
-  if (!host) return;
-  const site = `https://${host}`;
-  const defaults: Record<string, string> = {
-    CLIENT_ORIGIN: site,
+  // Production answers on the project's domain; a preview on its own deployment URL.
+  const { VERCEL_ENV, VERCEL_PROJECT_PRODUCTION_URL, VERCEL_URL, VERCEL_BRANCH_URL } = process.env;
+  const primary = VERCEL_ENV === "production" ? VERCEL_PROJECT_PRODUCTION_URL : VERCEL_URL;
+  const hosts = [...new Set([primary, VERCEL_URL, VERCEL_BRANCH_URL].filter(Boolean))];
+  const site = primary ? `https://${primary}` : undefined;
+  const defaults: Record<string, string | undefined> = {
+    CLIENT_ORIGIN: hosts.map((host) => `https://${host}`).join(",") || undefined,
     STOREFRONT_URL: site,
-    WEB_REVALIDATE_URL: `${site}/api/revalidate`,
+    // Public: vercel.json routes /api/revalidate to the web service. (Vercel rejects a binding
+    // back to `web` because `web` already binds to `api`.) Protected previews answer 401, and
+    // their pages refresh on the normal cache schedule instead.
+    WEB_REVALIDATE_URL: site && `${site}/api/revalidate`,
     // One proxy (Vercel) sits in front of the function; requests are first-party HTTPS.
     TRUST_PROXY: "1",
     COOKIE_SECURE: "true",
@@ -25,7 +28,7 @@ function applyVercelDefaults(): void {
     MAX_UPLOAD_MB: "4",
   };
   for (const [key, value] of Object.entries(defaults)) {
-    if (!process.env[key]?.trim()) process.env[key] = value;
+    if (value && !process.env[key]?.trim()) process.env[key] = value;
   }
 }
 
@@ -54,37 +57,16 @@ function prepare(): Promise<Express> {
   return ready;
 }
 
-// Connection-level headers that must not be copied onto the outgoing Response.
-const HOP_BY_HOP = new Set(["connection", "keep-alive", "transfer-encoding"]);
+const app = express();
 
-export async function handleWebRequest(request: Request): Promise<Response> {
-  let app: Express;
-  try {
-    app = await prepare();
-  } catch (error) {
-    console.error("[api] failed to start:", error instanceof Error ? error.message : error);
-    return Response.json(
-      { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "The store is temporarily unavailable. Please try again shortly." } },
-      { status: 503 },
-    );
-  }
+app.use((req, res, next) => {
+  prepare().then(
+    (api) => api(req, res, next),
+    (error: unknown) => {
+      console.error("[api] failed to start:", error instanceof Error ? error.message : error);
+      res.status(503).json({ success: false, error: { code: "SERVICE_UNAVAILABLE", message: "The store is temporarily unavailable. Please try again shortly." } });
+    },
+  );
+});
 
-  const url = new URL(request.url);
-  const hasBody = request.method !== "GET" && request.method !== "HEAD";
-  const result = await inject(app, {
-    method: request.method as "GET",
-    url: url.pathname + url.search,
-    headers: Object.fromEntries(request.headers),
-    // Express trusts one proxy hop (TRUST_PROXY=1) and reads the client IP from X-Forwarded-For.
-    remoteAddress: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined,
-    payload: hasBody ? Buffer.from(await request.arrayBuffer()) : undefined,
-  });
-
-  const headers = new Headers();
-  for (const [name, value] of Object.entries(result.headers)) {
-    if (value === undefined || HOP_BY_HOP.has(name)) continue;
-    for (const item of Array.isArray(value) ? value : [value]) headers.append(name, String(item));
-  }
-  const noBody = request.method === "HEAD" || result.statusCode === 204 || result.statusCode === 304;
-  return new Response(noBody ? null : new Uint8Array(result.rawPayload), { status: result.statusCode, headers });
-}
+export default app;

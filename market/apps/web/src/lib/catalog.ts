@@ -16,12 +16,27 @@ import type {
 import { fallbackSettings } from "@/config/site";
 import { buildQuery } from "@/lib/utils";
 
-/** API base URL for server-side requests (prefers the private network URL). */
-export const SERVER_API_URL = (process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/+$/, "");
+// On Vercel, the `api` binding (market/vercel.json) injects the API service's internal URL at
+// runtime. It is unset during builds and locally, which fall back to the configured URLs.
+const apiServiceUrl = process.env.API_SERVICE_URL;
+
+/** API base URL for server-side requests (prefers the internal service URL). */
+export const SERVER_API_URL = (
+  apiServiceUrl
+    ? new URL("api", apiServiceUrl.endsWith("/") ? apiServiceUrl : `${apiServiceUrl}/`).href
+    : process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+).replace(/\/+$/, "");
 
 type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number };
 
+const building = process.env.NEXT_PHASE === "phase-production-build";
+
+// A preview build cannot reach its own API: bindings resolve at runtime only, and the
+// preview URL is not live yet (and is protected). Production builds read the live site.
+const apiUnreachable = building && Boolean(process.env.VERCEL) && process.env.VERCEL_ENV !== "production";
+
 async function fetchApi<T>(path: string): Promise<FetchResult<T>> {
+  if (apiUnreachable) return { ok: false, status: 0 };
   try {
     const res = await fetch(`${SERVER_API_URL}${path}`, {
       headers: { Accept: "application/json" },
@@ -35,9 +50,13 @@ async function fetchApi<T>(path: string): Promise<FetchResult<T>> {
   }
 }
 
-/** Keeps successful results for minutes; failures expire quickly so the page recovers on its own. */
+/**
+ * Keeps successful results for minutes; failures expire quickly so the page recovers on its own.
+ * During a build every result keeps the minutes lifetime: the prerender passes must see the same
+ * cache entries, and the page revalidates within a minute at runtime.
+ */
 function lifetimeFor(result: FetchResult<unknown>): void {
-  if (result.ok || result.status === 404) cacheLife("minutes");
+  if (result.ok || result.status === 404 || building) cacheLife("minutes");
   else cacheLife("seconds");
 }
 

@@ -202,16 +202,21 @@ The cart quote and checkout always hit the API directly, so stock and prices are
 
 ## Deployment notes
 
-### Vercel (one project: storefront + API)
+### Vercel (one project, two services)
 
-On Vercel the Express API runs inside the web app: `apps/web/src/app/api/[...path]/route.ts` hands every `/api/*` request (except `/api/revalidate`) to `apps/api/src/vercel.ts`, which injects it into Express in-process. Store and API share one origin, so session cookies are first-party and need no CORS setup. Locally that route answers 404; the API keeps running as its own server on `:5000`.
+`market/vercel.json` deploys the repo as one Vercel project with two [services](https://vercel.com/docs/services): `web` (Next.js, `apps/web`) and `api` (Express, entry `apps/api/src/vercel.ts`). Both share one domain, so session cookies are first-party and need no CORS setup.
 
-1. Import the GitHub repo in Vercel and set **Root Directory** to `apps/web`. `apps/web/vercel.json` sets the build command (shared → API → web).
-2. Add the secrets as environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `REVALIDATE_SECRET`, `STORE_WHATSAPP_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Do not copy `NODE_ENV`, `PORT`, `DNS_SERVERS`, `ALLOWED_DEV_ORIGINS` or the localhost URLs.
-3. The site URL settings default from Vercel's production URL (`VERCEL_PROJECT_PRODUCTION_URL`): `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `CLIENT_ORIGIN`, `STOREFRONT_URL`, `WEB_REVALIDATE_URL`, plus `TRUST_PROXY=1`, secure `lax` cookies and `MAX_UPLOAD_MB=4`. Set any of them explicitly to override (e.g. after adding a custom domain).
+- **Public routes:** `/api/revalidate` → `web`; every other `/api/*` → `api` (it receives the original path, so the Express routes match unchanged); everything else → `web`.
+- **Binding:** `web` → `api` injects `API_SERVICE_URL`, which server-side rendering uses to call the API internally (`apps/web/src/lib/catalog.ts`). Bindings exist at runtime only; builds and local runs fall back to `API_INTERNAL_URL` / `NEXT_PUBLIC_API_URL`. Vercel rejects circular bindings, so the API reaches `/api/revalidate` over the public URL instead.
+- **Builds:** preview builds cannot reach their own API, so the catalogue treats it as offline; production builds read the live site. Every build-time read is cached for minutes (Vercel requires stable entries between prerender passes) and revalidates within a minute at runtime.
+
+1. Project settings: **Framework Preset** `Services`, **Root Directory** empty (the folder holding `vercel.json`). Each service sets its own build command (shared → app).
+2. Add the secrets as environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `REVALIDATE_SECRET`, `STORE_WHATSAPP_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Give **Preview** its own `MONGODB_DB_NAME` and `CLOUDINARY_FOLDER` (this project uses `aba-mart-e2e`) so previews never touch real data. Do not copy `NODE_ENV`, `PORT`, `DNS_SERVERS`, `ALLOWED_DEV_ORIGINS` or the localhost URLs.
+3. URL settings default from the deployment: production uses `VERCEL_PROJECT_PRODUCTION_URL`, a preview its own `VERCEL_URL`. This covers `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `CLIENT_ORIGIN`, `STOREFRONT_URL`, `WEB_REVALIDATE_URL`, plus `TRUST_PROXY=1`, secure `lax` cookies and `MAX_UPLOAD_MB=4`. Set any of them explicitly to override (e.g. after adding a custom domain).
 4. In MongoDB Atlas → Network Access, allow `0.0.0.0/0`, because Vercel functions have no fixed IP.
+5. Deploy with `vercel deploy --prod` from `market/` (`.vercelignore` keeps `.env` out of the upload).
 
-Serverless differences: push deliveries run under `waitUntil` so they finish after the response; each instance rate-limits on its own; request bodies are capped at 4.5 MB by Vercel.
+Serverless differences: push deliveries run under `waitUntil` so they finish after the response; each instance rate-limits on its own; request bodies are capped at 4.5 MB by Vercel. Protected previews answer 401 to the public revalidation call, so their pages refresh on the one-minute schedule.
 
 ### Separate servers
 

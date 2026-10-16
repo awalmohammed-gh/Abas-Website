@@ -12,8 +12,10 @@ if (existsSync(sharedEnvFile)) {
   }
 }
 
-// On Vercel the API runs inside this app (src/pages/api), so it shares the site's URL.
-const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+// On Vercel the `api` service is routed at /api on the site's own domain (market/vercel.json).
+// Production uses the project's domain; a preview uses its own deployment URL, so it never
+// calls the production API.
+const vercelHost = process.env.VERCEL_ENV === "production" ? process.env.VERCEL_PROJECT_PRODUCTION_URL : process.env.VERCEL_URL;
 if (vercelHost) {
   process.env.NEXT_PUBLIC_SITE_URL ||= `https://${vercelHost}`;
   process.env.NEXT_PUBLIC_API_URL ||= `https://${vercelHost}/api`;
