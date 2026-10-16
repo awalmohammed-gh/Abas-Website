@@ -1,4 +1,4 @@
-import type { StoreSettingsDTO } from "@aba-mart/shared";
+import { DEFAULT_NOTIFICATION_SETTINGS, DEFAULT_STOREFRONT_SETTINGS, type StoreSettingsDTO } from "@aba-mart/shared";
 
 const stripSlash = (url: string) => url.replace(/\/+$/, "");
 
@@ -30,5 +30,10 @@ export const fallbackSettings: StoreSettingsDTO = {
   openingHours: "",
   announcement: "",
   socialLinks: { facebook: "", instagram: "", tiktok: "", x: "", youtube: "" },
+  whatsappOrderingEnabled: true,
+  whatsappGreeting: "",
+  whatsappSupportMessage: "",
+  notifications: { ...DEFAULT_NOTIFICATION_SETTINGS },
+  storefront: { ...DEFAULT_STOREFRONT_SETTINGS },
   updatedAt: null,
 };

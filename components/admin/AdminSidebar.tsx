@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { IconType } from "react-icons";
-import { FiBox, FiExternalLink, FiGrid, FiHome, FiImage, FiLayers, FiLogOut, FiPlusSquare, FiSettings, FiShoppingCart } from "react-icons/fi";
+import { FiBell, FiBox, FiExternalLink, FiGrid, FiHome, FiImage, FiLayers, FiLogOut, FiPlusSquare, FiSettings, FiShoppingCart } from "react-icons/fi";
+import type { ImageAsset } from "@aba-mart/shared";
 import { Logo } from "@/components/brand/Logo";
 import { cn } from "@/lib/utils";
 import { useAdminSession } from "./AdminSession";
@@ -16,6 +17,7 @@ export const ADMIN_NAV: { label: string; href: string; icon: IconType; exact?: b
   { label: "Orders", href: "/admin/orders", icon: FiShoppingCart },
   { label: "Inventory", href: "/admin/inventory", icon: FiLayers },
   { label: "Banners", href: "/admin/banners", icon: FiImage },
+  { label: "Notifications", href: "/admin/notifications", icon: FiBell },
   { label: "Settings", href: "/admin/settings", icon: FiSettings },
 ];
 
@@ -24,7 +26,7 @@ export function isNavActive(pathname: string, href: string, exact?: boolean) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function AdminSidebar({ onNavigate, storeName, logo }: { onNavigate?: () => void; storeName?: string; logo?: ImageAsset | null }) {
   const pathname = usePathname();
   const { logout } = useAdminSession();
 
@@ -32,7 +34,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-brand-deep text-cream">
       <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
         <Link href="/admin" onClick={onNavigate} aria-label="Admin overview">
-          <Logo tone="dark" />
+          <Logo tone="dark" storeName={storeName} logo={logo} />
         </Link>
       </div>
       <nav aria-label="Admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">

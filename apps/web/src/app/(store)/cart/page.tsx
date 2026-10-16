@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CartView } from "@/components/cart/CartView";
 import { getSettings } from "@/lib/catalog";
+import { whatsappOrderingNotice } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Your cart",
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 
 async function CartLoader() {
   const settings = await getSettings();
-  return <CartView whatsappEnabled={!!settings.whatsappNumber} />;
+  const notice = whatsappOrderingNotice(settings);
+  return <CartView whatsappEnabled={!notice} whatsappNotice={notice} />;
 }
 
 export default function CartPage() {

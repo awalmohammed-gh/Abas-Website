@@ -1,7 +1,8 @@
 import { FiPackage } from "react-icons/fi";
+import { StaggerContainer } from "@/components/animations/StaggerContainer";
 import { ProductGrid, ProductGridSkeleton } from "@/components/products/ProductGrid";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getProducts, type ProductQuery } from "@/lib/catalog";
+import { getProducts, getSettings, type ProductQuery } from "@/lib/catalog";
 import { SectionHeading } from "./SectionHeading";
 
 interface ProductSectionProps {
@@ -27,23 +28,28 @@ async function ProductSection({ id, eyebrow, title, description, href, query, hi
         {result === null ? (
           <p className="rounded-2xl border border-line bg-white p-6 text-sm text-muted">Products couldn&apos;t be loaded right now. Please refresh in a moment.</p>
         ) : (
-          <ProductGrid
-            products={result.items}
+          <StaggerContainer items=":scope > ul > li">
+            <ProductGrid
+              products={result.items}
             empty={
               <EmptyState
                 icon={<FiPackage />}
                 title="New stock is on the way"
                 description="We're adding products to the store. In the meantime, message us on WhatsApp and we'll help you find what you need."
               />
-            }
-          />
+              }
+            />
+          </StaggerContainer>
         )}
       </div>
     </section>
   );
 }
 
-export function FeaturedProducts() {
+/** Hidden when switched off in Admin → Settings → Storefront. */
+export async function FeaturedProducts() {
+  const { storefront } = await getSettings();
+  if (!storefront.showFeaturedProducts) return null;
   return (
     <ProductSection
       id="featured-heading"
@@ -58,7 +64,10 @@ export function FeaturedProducts() {
   );
 }
 
-export function NewArrivals() {
+/** Hidden when switched off in Admin → Settings → Storefront. */
+export async function NewArrivals() {
+  const { storefront } = await getSettings();
+  if (!storefront.showNewArrivals) return null;
   return <ProductSection id="new-heading" eyebrow="Just in" title="New arrivals" href="/shop" query={{ sort: "newest", limit: 8 }} />;
 }
 

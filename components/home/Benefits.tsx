@@ -1,5 +1,7 @@
 import { FaWhatsapp } from "react-icons/fa";
 import { FiLayers, FiMapPin, FiUserCheck } from "react-icons/fi";
+import { RevealOnScroll } from "@/components/animations/RevealOnScroll";
+import { StaggerContainer } from "@/components/animations/StaggerContainer";
 
 const BENEFITS = [
   {
@@ -28,13 +30,13 @@ export function Benefits() {
   return (
     <section className="bg-white py-14 sm:py-16" aria-labelledby="benefits-heading">
       <div className="container-page">
-        <div className="mb-8 max-w-2xl">
-          <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Why ABA Mart</p>
+        <RevealOnScroll className="mb-8 max-w-2xl">
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Why shop with us</p>
           <h2 id="benefits-heading" className="text-2xl font-bold text-ink sm:text-3xl">
             Shopping that fits the way you already talk to us
           </h2>
-        </div>
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        </RevealOnScroll>
+        <StaggerContainer as="ul" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {BENEFITS.map(({ icon: Icon, title, text }) => (
             <li key={title} className="rounded-2xl border border-line bg-cream p-5">
               <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-brand text-cream">
@@ -44,7 +46,7 @@ export function Benefits() {
               <p className="mt-1.5 text-sm leading-relaxed text-muted">{text}</p>
             </li>
           ))}
-        </ul>
+        </StaggerContainer>
       </div>
     </section>
   );

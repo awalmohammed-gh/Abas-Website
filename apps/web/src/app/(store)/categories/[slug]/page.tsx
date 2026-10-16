@@ -7,15 +7,15 @@ import { FiAlertCircle } from "react-icons/fi";
 import { ProductGridSkeleton } from "@/components/products/ProductGrid";
 import { ProductListing } from "@/components/products/ProductListing";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getCategory } from "@/lib/catalog";
+import { getCategory, getMetadataSettings } from "@/lib/catalog";
 
 export async function generateMetadata({ params }: PageProps<"/categories/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const category = await getCategory(slug);
+  const [category, { storeName }] = await Promise.all([getCategory(slug), getMetadataSettings()]);
   if (!category || category === "error") return { title: "Category" };
   return {
     title: category.name,
-    description: category.description || `Shop ${category.name} at ABA Mart and order on WhatsApp.`,
+    description: category.description || `Shop ${category.name} at ${storeName} and order on WhatsApp.`,
     alternates: { canonical: `/categories/${category.slug}` },
     openGraph: category.image ? { images: [{ url: category.image.url, alt: category.name }] } : undefined,
   };

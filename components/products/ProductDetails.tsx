@@ -60,7 +60,7 @@ function Gallery({ product }: { product: ProductDTO }) {
   );
 }
 
-export function ProductDetails({ product, whatsappEnabled }: { product: ProductDTO; whatsappEnabled: boolean }) {
+export function ProductDetails({ product, whatsappEnabled, whatsappNotice }: { product: ProductDTO; whatsappEnabled: boolean; whatsappNotice?: string | null }) {
   const router = useRouter();
   const { addItem, lines, hydrated, pending, error: cartError } = useCart();
   const hasVariants = product.variants.length > 0;
@@ -212,7 +212,7 @@ export function ProductDetails({ product, whatsappEnabled }: { product: ProductD
               Order via WhatsApp
             </Button>
           </div>
-          {!whatsappEnabled && <p className="text-xs text-muted">WhatsApp ordering is being set up. Please check back soon.</p>}
+          {!whatsappEnabled && <p className="text-xs text-muted">{whatsappNotice ?? "WhatsApp ordering is being set up. Please check back soon."}</p>}
             {cartError && <p role="alert" className="text-sm text-danger">{cartError}</p>}
           <p className="flex items-start gap-2 text-xs leading-relaxed text-muted">
             <FiTruck className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />

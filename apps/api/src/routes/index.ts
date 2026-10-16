@@ -7,6 +7,7 @@ import { adminDashboardRouter, adminOrderRouter, orderRouter } from "./orderRout
 import { adminProductRouter, productRouter } from "./productRoutes.js";
 import { adminSettingsRouter, settingsRouter } from "./settingsRoutes.js";
 import { cartRouter, customerRouter, myOrdersRouter } from "./customerRoutes.js";
+import { adminNotificationRouter, notificationRouter, pushRouter } from "./notificationRoutes.js";
 
 export const apiRouter = Router();
 
@@ -19,6 +20,8 @@ apiRouter.use("/orders", orderRouter);
 apiRouter.use("/customer", customerRouter);
 apiRouter.use("/cart", cartRouter);
 apiRouter.use("/my-orders", myOrdersRouter);
+apiRouter.use("/notifications", notificationRouter);
+apiRouter.use("/push", pushRouter);
 
 // Admin routes: each router below enforces the admin session and CSRF token itself
 apiRouter.use("/admin/auth", authRouter);
@@ -30,3 +33,4 @@ apiRouter.use("/admin/inventory", adminInventoryRouter);
 apiRouter.use("/admin/banners", adminBannerRouter);
 apiRouter.use("/admin/settings", adminSettingsRouter);
 apiRouter.use("/admin/uploads", adminUploadRouter);
+apiRouter.use("/admin/notifications", adminNotificationRouter);

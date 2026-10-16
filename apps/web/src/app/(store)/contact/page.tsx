@@ -3,19 +3,22 @@ import { Suspense } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiClock, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { formatPhoneDisplay } from "@aba-mart/shared";
-import { getSettings } from "@/lib/catalog";
-import { whatsappChatUrl } from "@/lib/whatsapp";
+import { getMetadataSettings, getSettings } from "@/lib/catalog";
+import { supportChatUrl } from "@/lib/whatsapp";
 import { ContactForm } from "@/components/contact/ContactForm";
 
-export const metadata: Metadata = {
-  title: "Contact us",
-  description: "Get in touch with ABA Mart on WhatsApp, phone or email.",
-  alternates: { canonical: "/contact" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { storeName } = await getMetadataSettings();
+  return {
+    title: "Contact us",
+    description: `Get in touch with ${storeName} on WhatsApp, phone or email.`,
+    alternates: { canonical: "/contact" },
+  };
+}
 
 async function ContactDetails() {
   const settings = await getSettings();
-  const chatUrl = whatsappChatUrl(settings.whatsappNumber);
+  const chatUrl = supportChatUrl(settings);
   const items = [
     chatUrl && { icon: FaWhatsapp, label: "WhatsApp", value: formatPhoneDisplay(settings.whatsappNumber), href: chatUrl, external: true },
     settings.supportPhone && { icon: FiPhone, label: "Phone", value: settings.supportPhone, href: `tel:${settings.supportPhone.replace(/[^\d+]/g, "")}` },

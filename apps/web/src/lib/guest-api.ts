@@ -48,5 +48,5 @@ export const guestApi = {
   post: <T>(path: string, body?: unknown) => guestRequest<T>(path, "POST", body),
   put: <T>(path: string, body?: unknown) => guestRequest<T>(path, "PUT", body),
   patch: <T>(path: string, body?: unknown) => guestRequest<T>(path, "PATCH", body),
-  delete: <T>(path: string) => guestRequest<T>(path, "DELETE"),
+  delete: <T>(path: string, body?: unknown) => guestRequest<T>(path, "DELETE", body),
 };

@@ -1,4 +1,4 @@
-import { formatGHS, type OrderPreviewDTO } from "@aba-mart/shared";
+import { formatGHS, type ImageAsset, type OrderPreviewDTO } from "@aba-mart/shared";
 import { Logo } from "@/components/brand/Logo";
 import { ProductImage } from "@/components/products/ProductImage";
 import { ButtonLink } from "@/components/ui/Button";
@@ -6,10 +6,10 @@ import { ButtonLink } from "@/components/ui/Button";
 const date = (value: string) => new Intl.DateTimeFormat("en-GH", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Accra" }).format(new Date(value));
 
 /** The shared view accepts a product-only DTO, never a private customer order. */
-export function OrderPreview({ order }: { order: OrderPreviewDTO }) {
+export function OrderPreview({ order, logo = null }: { order: OrderPreviewDTO; logo?: ImageAsset | null }) {
   return <article className="overflow-hidden rounded-3xl border border-line bg-white shadow-card">
     <header className="flex flex-wrap items-center justify-between gap-5 border-b border-line px-5 py-6 sm:px-8">
-      <Logo storeName={order.storeName} />
+      <Logo storeName={order.storeName} logo={logo} />
       <div className="text-right">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">Order preview</p>
         <h1 className="mt-1 text-2xl font-bold text-ink sm:text-3xl">{order.orderReference}</h1>

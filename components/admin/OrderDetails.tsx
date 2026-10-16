@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { broadcastStoreEvent } from "@/lib/storeChannel";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiPhone } from "react-icons/fi";
 import {
@@ -60,6 +61,7 @@ export function OrderDetails({ order, storeName, onClose, onUpdated }: OrderDeta
       setNote("");
       setNext([...ORDER_STATUS_TRANSITIONS[result.order.status]].sort((a, b) => Number(a === skip) - Number(b === skip))[0] ?? "");
       onUpdated(result.order);
+      if (result.changed) broadcastStoreEvent({ type: "notifications" });
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {

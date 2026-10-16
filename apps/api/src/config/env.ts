@@ -69,6 +69,11 @@ const envSchema = z
     WEB_REVALIDATE_URL: z.url().optional(),
     STOREFRONT_URL: z.url().refine((value) => /^https?:\/\//.test(value), "STOREFRONT_URL must use http or https").optional(),
     REVALIDATE_SECRET: z.string().min(24, "REVALIDATE_SECRET must be at least 24 characters").optional(),
+
+    /** Web Push (VAPID). Push is disabled until all three are set; the private key never leaves the server. */
+    VAPID_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]{80,100}$/, "VAPID_PUBLIC_KEY must be a base64url key").optional(),
+    VAPID_PRIVATE_KEY: z.string().regex(/^[A-Za-z0-9_-]{40,50}$/, "VAPID_PRIVATE_KEY must be a base64url key").optional(),
+    VAPID_SUBJECT: z.string().regex(/^(mailto:\S+@\S+|https:\/\/\S+)$/, "VAPID_SUBJECT must be mailto:you@example.com or an https:// URL").optional(),
   })
   .superRefine((value, ctx) => {
     const secure = value.COOKIE_SECURE ?? value.NODE_ENV === "production";
@@ -85,6 +90,10 @@ const envSchema = z
         path: ["REVALIDATE_SECRET"],
         message: "REVALIDATE_SECRET is required when WEB_REVALIDATE_URL is set",
       });
+    }
+    const vapid = [value.VAPID_PUBLIC_KEY, value.VAPID_PRIVATE_KEY, value.VAPID_SUBJECT].filter(Boolean).length;
+    if (vapid !== 0 && vapid !== 3) {
+      ctx.addIssue({ code: "custom", path: ["VAPID_PRIVATE_KEY"], message: "Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT together (or none to disable push)" });
     }
     if (value.NODE_ENV === "production") {
       const storefront = value.STOREFRONT_URL ?? value.CLIENT_ORIGIN[0];
@@ -125,6 +134,11 @@ export const env = {
     apiKey: data.CLOUDINARY_API_KEY,
     apiSecret: data.CLOUDINARY_API_SECRET,
   },
+  /** Web Push credentials, or null when push is not configured. */
+  vapid:
+    data.VAPID_PUBLIC_KEY && data.VAPID_PRIVATE_KEY && data.VAPID_SUBJECT
+      ? { publicKey: data.VAPID_PUBLIC_KEY, privateKey: data.VAPID_PRIVATE_KEY, subject: data.VAPID_SUBJECT }
+      : null,
 } as const;
 
 export type Env = typeof env;

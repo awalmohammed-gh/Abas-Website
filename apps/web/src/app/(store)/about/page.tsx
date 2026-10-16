@@ -4,14 +4,17 @@ import { FaWhatsapp } from "react-icons/fa";
 import { FiArrowRight } from "react-icons/fi";
 import { Benefits } from "@/components/home/Benefits";
 import { ButtonLink } from "@/components/ui/Button";
-import { getSettings } from "@/lib/catalog";
-import { whatsappChatUrl } from "@/lib/whatsapp";
+import { getMetadataSettings, getSettings } from "@/lib/catalog";
+import { supportChatUrl } from "@/lib/whatsapp";
 
-export const metadata: Metadata = {
-  title: "About us",
-  description: "ABA Mart is a Ghanaian multi-category store for everyday essentials. Learn how ordering on WhatsApp works.",
-  alternates: { canonical: "/about" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { storeName } = await getMetadataSettings();
+  return {
+    title: "About us",
+    description: `${storeName} is a Ghanaian multi-category store for everyday essentials. Learn how ordering on WhatsApp works.`,
+    alternates: { canonical: "/about" },
+  };
+}
 
 const STEPS = [
   { title: "Browse and add to cart", text: "Pick the products you want. Choose sizes, colours or volumes where they apply." },
@@ -32,7 +35,7 @@ async function AboutIntro() {
 
 async function AboutCta() {
   const settings = await getSettings();
-  const chatUrl = whatsappChatUrl(settings.whatsappNumber, `Hello ${settings.storeName}!`);
+  const chatUrl = supportChatUrl(settings, `Hello ${settings.storeName}!`);
   return (
     <div className="flex flex-col gap-3 sm:flex-row">
       <ButtonLink href="/shop" size="lg" rightIcon={<FiArrowRight className="size-5" aria-hidden="true" />}>

@@ -1,5 +1,12 @@
 import { Schema, model, type Types } from "mongoose";
-import type { ImageAsset, SocialLinks } from "@aba-mart/shared";
+import {
+  DEFAULT_NOTIFICATION_SETTINGS,
+  DEFAULT_STOREFRONT_SETTINGS,
+  type ImageAsset,
+  type NotificationSettings,
+  type SocialLinks,
+  type StorefrontSettings,
+} from "@aba-mart/shared";
 import { imageAssetSchema } from "./common.js";
 
 export const SETTINGS_KEY = "store";
@@ -18,6 +25,11 @@ export interface SettingsDoc {
   openingHours: string;
   announcement: string;
   socialLinks: SocialLinks;
+  whatsappOrderingEnabled: boolean;
+  whatsappGreeting: string;
+  whatsappSupportMessage: string;
+  notifications: NotificationSettings;
+  storefront: StorefrontSettings;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +60,20 @@ const settingsSchema = new Schema<SettingsDoc>(
       tiktok: { type: String, default: "" },
       x: { type: String, default: "" },
       youtube: { type: String, default: "" },
+    },
+    whatsappOrderingEnabled: { type: Boolean, default: true },
+    whatsappGreeting: { type: String, default: "", trim: true, maxlength: 120 },
+    whatsappSupportMessage: { type: String, default: "", trim: true, maxlength: 300 },
+    notifications: {
+      enabled: { type: Boolean, default: DEFAULT_NOTIFICATION_SETTINGS.enabled },
+      newProducts: { type: Boolean, default: DEFAULT_NOTIFICATION_SETTINGS.newProducts },
+      promotions: { type: Boolean, default: DEFAULT_NOTIFICATION_SETTINGS.promotions },
+      adminOrderAlerts: { type: Boolean, default: DEFAULT_NOTIFICATION_SETTINGS.adminOrderAlerts },
+      promptDelaySeconds: { type: Number, default: DEFAULT_NOTIFICATION_SETTINGS.promptDelaySeconds, min: 5, max: 600 },
+    },
+    storefront: {
+      showFeaturedProducts: { type: Boolean, default: DEFAULT_STOREFRONT_SETTINGS.showFeaturedProducts },
+      showNewArrivals: { type: Boolean, default: DEFAULT_STOREFRONT_SETTINGS.showNewArrivals },
     },
   },
   { timestamps: true },

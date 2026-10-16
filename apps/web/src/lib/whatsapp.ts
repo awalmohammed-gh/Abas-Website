@@ -1,4 +1,4 @@
-import { buildWhatsAppUrl } from "@aba-mart/shared";
+import { buildWhatsAppUrl, type StoreSettingsDTO } from "@aba-mart/shared";
 
 export { buildWhatsAppUrl };
 
@@ -6,6 +6,24 @@ export { buildWhatsAppUrl };
 export function whatsappChatUrl(number: string | null | undefined, text?: string): string | null {
   if (!number) return null;
   return buildWhatsAppUrl(number, text);
+}
+
+/**
+ * General "chat with us" link. Uses the support message set in Admin → Settings →
+ * WhatsApp when there is one, otherwise the page's own default text.
+ */
+export function supportChatUrl(
+  settings: Pick<StoreSettingsDTO, "whatsappNumber" | "whatsappSupportMessage">,
+  fallbackText?: string,
+): string | null {
+  return whatsappChatUrl(settings.whatsappNumber, settings.whatsappSupportMessage || fallbackText);
+}
+
+/** Why customers cannot prepare a WhatsApp order right now, or null when they can. */
+export function whatsappOrderingNotice(settings: Pick<StoreSettingsDTO, "whatsappNumber" | "whatsappOrderingEnabled">): string | null {
+  if (!settings.whatsappNumber) return "WhatsApp ordering is being set up. Please check back soon.";
+  if (!settings.whatsappOrderingEnabled) return "WhatsApp ordering is paused right now. You can still chat with us on WhatsApp.";
+  return null;
 }
 
 /**

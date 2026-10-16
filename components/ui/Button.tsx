@@ -25,7 +25,7 @@ const sizes: Record<Size, string> = {
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex min-w-0 max-w-full shrink-0 items-center justify-center whitespace-normal text-center [overflow-wrap:anywhere] font-semibold transition-colors duration-150 [&>svg]:shrink-0",
+    "inline-flex min-w-0 max-w-full shrink-0 items-center justify-center whitespace-normal text-center [overflow-wrap:anywhere] font-semibold transition-[color,background-color,border-color,scale] duration-150 ease-out motion-safe:active:scale-[0.98] [&>svg]:shrink-0",
     "disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55",
     variants[variant],
     variant === "link" ? "h-auto text-sm" : sizes[size],

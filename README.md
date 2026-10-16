@@ -76,7 +76,7 @@ The storefront only ever shows what is in the database. With no products it show
 | `npm run start:api` / `npm run start:web` | Run the production builds |
 | `npm run typecheck` | TypeScript checks for every workspace |
 | `npm run lint` | ESLint for the API, the web app, `components/` and `config/` |
-| `npm test` | Shared unit tests and API integration tests (in-memory MongoDB replica set) |
+| `npm test` | Shared and web API-client unit tests, plus API integration tests (in-memory MongoDB replica set) |
 | `npm run create-admin` | Create an admin, or reset an existing admin's password (signs out their sessions) |
 | `npm run seed:mock` | Load the starter catalogue from `data/` (`-- --remove` to take it out again) |
 
@@ -129,6 +129,48 @@ Safeguards:
 - Repeating a status update is a no-op. Concurrent confirmations cannot oversell; this is covered by tests.
 - Each change is recorded in the order's status history with the admin and an optional note.
 
+## Store settings
+
+Admin → Settings has five sections. Every value is stored in the single MongoDB `Settings` document and read through the cached server functions in `apps/web/src/lib/catalog.ts`, so there is one source of truth.
+
+| Section | Settings | Where they apply |
+| --- | --- | --- |
+| General | Store name, description, contact email, phone, address, business hours, social links | Navbar, footer, page titles and descriptions, Contact/About pages, admin title and sign-in |
+| Branding | Logo, favicon (Cloudinary) | Navbar, mobile menu, footer, admin menu and sign-in, order previews, 404 page, browser tab, push icon, Home Screen app |
+| WhatsApp | Business number, accept orders on/off, order greeting, support chat message | Product and cart checkout, every "Chat with us" link, order help links |
+| Notifications | Store notifications on/off, new-product and promotional types, admin order alerts, invitation delay; subscriber counts; compose and publish | Notification bell, opt-in invitation, push delivery, dashboard alerts |
+| Storefront | Announcement bar, featured products and new arrivals sections | Every page header, homepage |
+
+**How changes reach every page:** saving calls the storefront's `/api/revalidate` (awaited), so the next request renders fresh values. Open store tabs in the same browser refresh at once (`BroadcastChannel`); tabs on other devices notice the new settings version in their next notification poll (about a minute) and refresh themselves. No redeploy is needed.
+
+## Notifications
+
+No WebSockets, Socket.IO or WhatsApp API are used.
+
+**In-app (MongoDB + polling).** Announcements are stored once in `notifications`; per-recipient read and dismissal state lives in `notificationreadstates` (`guest:<session>` or `admin:<id>`), so public announcements are never copied per customer. The store polls `GET /api/notifications/public` and the dashboard polls `GET /api/admin/notifications/summary` about every 15 s, only while the tab is visible, and immediately when it becomes visible again. Read state is scoped to the visitor's guest session; promotions only appear for visitors who opted in. Order alerts are `audience: "admin"` and only served to signed-in admins.
+
+**Customer order updates.** Every successful admin status change saves an `order_update` notification in the same transaction as the order and stock adjustment. The `customer` audience is restricted to the order's owning guest session. Repeated or failed updates produce no duplicate or misleading notifications; older orders without verified ownership never get assigned by phone or name. The customer bell links directly to the private order details and open My orders pages refresh when a new update arrives. Push goes only to that visitor's active subscriptions, with generic lock-screen text; it requires the existing browser permission and store push configuration. Staff notes and customer contact details never appear in notification payloads.
+
+**Selection and deletion.** Both bells have selection checkboxes, select-all and delete actions. Customer deletion dismisses notifications only from that guest's inbox and persists across reloads; Delete all also clears items beyond the twenty-item feed. Admin notification history supports selection on the current page or all records in the selected filter across pages. Admin deletion removes notifications and associated receipts, while queued/sending push deliveries are kept. Notification deletion never changes an order or its status history. Deletion endpoints require the owning guest session or an authorized admin, plus CSRF protection; empty and ambiguous selections are rejected.
+
+**Pending checkout alerts.** When a customer prepares a WhatsApp checkout, the dashboard gets a "New pending checkout request" alert (one per order, deduplicated). It is not a confirmed order and no stock is deducted; click-to-chat cannot tell us the message was sent. The admin confirms the order after the WhatsApp message arrives.
+
+**Browser push (Web Push + VAPID).** `public/sw.js` only handles `push` and `notificationclick` (no fetch handler, so nothing is cached) and only opens pages on this site. The store shows its own invitation after the visitor has browsed for the configured delay (never on cart or My orders); the browser's permission prompt appears only after they click **Enable Notifications**. "Not now" hides it for 14 days; a blocked permission is never asked again. Subscriptions are saved through the guest session (CSRF-protected), bound to the browser's auth secret, and limited to known push services (Google, Mozilla, Apple, Microsoft), so they can't be used to make the server call other hosts. Endpoints and keys are never returned by the API.
+
+Publishing with push queues a background delivery: batches of 200, 20 at a time, resumable after a restart. The admin sees targeted / accepted / failed counts. **Accepted** means the browser's push service took the message, not that a device displayed it. Subscriptions the push service reports as gone (404/410), or that fail 5 times in a row, are switched off and deleted 30 days later.
+
+Setup: generate keys once with `npx web-push generate-vapid-keys` and set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` in `apps/api/.env` (the private key stays on the server; the browser gets the public key from `GET /api/push/config`). Without them, in-app notifications still work and push options are hidden. Web Push needs **HTTPS** in production (localhost is allowed). On iPhone and iPad, customers must add the store to the Home Screen first; the bell explains this. Private/incognito windows can't receive push.
+
+## Animations
+
+Landing-page motion uses [Motion](https://motion.dev) (`motion` 13.5.1), kept deliberately small:
+
+- **Scroll reveals** (`components/animations/`): `RevealOnScroll` and `StaggerContainer` use one `IntersectionObserver` per section and Motion's mini `useAnimate` (`motion/react-mini`, Web Animations API). Only `opacity` and `translate` animate. The server renders everything visible; only content still below the screen after hydration is hidden and then revealed, so nothing flickers and content stays visible if JavaScript is slow. Reveals are skipped with reduced motion and forced visible when printing.
+- **Do not import from `motion/react` on storefront pages**: even one hook pulls in Motion's full React bundle (about 45 KB gzipped). Use `motion/react-mini` and the helpers in `components/animations/`.
+- **Hero**: Motion's mini `useAnimate` glides incoming and outgoing banners together over 900ms, with directional navigation and a gentle image zoom. The first banner renders immediately; copy rises in with a CSS keyframe (`animate-hero-rise`). Hidden slides load their image only when about to be shown. The automatic timer runs every 6.5 seconds, pauses on hover, keyboard focus and hidden tabs, and is off with reduced motion. Manual navigation switches instantly with reduced motion. Controls briefly lock during a transition to prevent overlapping animations.
+- **Hovers**: the `lift` utility (globals.css) raises cards 2px and fades in a shadow layer (transform + opacity only, hover-capable pointers only). Images zoom 3–4%.
+- **Timing**: hovers 150–250ms, reveals 450–500ms with a 60ms stagger, mobile menu 300ms; shared easing `--ease-out-soft` / `EASE_OUT`.
+
 ## Security
 
 - Admin login uses bcrypt (12 rounds) and a JWT in an **HTTP-only** cookie scoped to `/api/admin`. `Secure` is set in production and `SameSite` is configurable. Sessions expire after `JWT_EXPIRES_IN_HOURS`.
@@ -143,7 +185,7 @@ Safeguards:
 
 ## Data model (MongoDB)
 
-`Admin`, `Category`, `Product` (with variants), `Order` (snapshots of name, variant and unit price at order time), `Banner`, `Settings` (single document), `Counter` (order reference sequence).
+`Admin`, `Category`, `Product` (with variants), `Order` (snapshots of name, variant and unit price at order time), `Banner`, `Settings` (single document), `Counter` (order reference sequence), `CustomerSession` (guest sessions, carts, notification preferences), `Notification`, `NotificationReadState`, `PushSubscription`.
 
 All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products have an optional **subcategory** (e.g. "Jeans", "Shower Gel"), shown on cards and included in search. Products are **archived** rather than deleted, so order history stays intact. A category can't be deleted while any product uses it; hide it instead.
 
@@ -166,7 +208,10 @@ The cart quote and checkout always hit the API directly, so stock and prices are
 ## Development notes
 
 - In development, `GET /api/health` also reports `databaseName`, the database the API is actually connected to. This is hidden in production.
+- `/admin` checks the HTTP-only admin session before showing the dashboard. A missing or expired session redirects to `/admin/login`; network and server errors show a retry message. JSON API requests time out after 20 seconds (uploads allow 60 seconds), including response-body reads. The loading screen also has a direct sign-in link, available before JavaScript loads.
 - `npm run dev` runs the API with `tsx watch`, which restarts it on every file change using `apps/api/.env`. Stop it before running anything against a test database on the same port.
+- Browser tests: Playwright's default (incognito-like) contexts can't use Web Push; use `launchPersistentContext` with a temporary profile. Run tests against the isolated stack (API `:5055` on `aba-mart-e2e`, web `:3055`), never the dev ports.
+- Open the store at `http://localhost:3000` or `http://127.0.0.1:3000`. For phone testing over Wi-Fi, add this PC's LAN IP to `ALLOWED_DEV_ORIGINS` in `apps/web/.env.local` and `http://<ip>:3000` to the API's `CLIENT_ORIGIN`, then restart `npm run dev`. Without this, Next.js blocks its dev scripts for that host and pages never finish loading (e.g. the admin stays on "Checking your session"). The browser calls the API on the same host the page was opened from, so port 5000 must also be reachable (allow Node.js through Windows Firewall).
 
 ## Known notes
 

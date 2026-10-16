@@ -1,0 +1,6 @@
+Tool: built-in imagegen
+Source: aba-mart-logo.png
+Output: aba-mart-logo-transparent.png (transparent PNG)
+
+Final prompt:
+Use case: background-extraction. Edit target: the supplied ABA'S Mart logo. Remove the white background to actual transparent alpha, including white negative spaces between the cart, shopping bag and lettering. Preserve the exact existing blue and orange logo artwork, gradients, proportions, edges and text verbatim "ABA'S Mart". Do not redesign, redraw or add anything. Crop excess empty outer padding to a neat tight bounding box with a small transparent margin. Output a clean transparent PNG for a website navbar.

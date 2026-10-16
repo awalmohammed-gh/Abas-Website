@@ -10,6 +10,7 @@ import type {
   ProductVariantDTO,
   StoreSettingsDTO,
 } from "@aba-mart/shared";
+import { DEFAULT_NOTIFICATION_SETTINGS, DEFAULT_STOREFRONT_SETTINGS } from "@aba-mart/shared";
 import type { BannerDoc } from "../models/Banner.js";
 import type { CategoryDoc } from "../models/Category.js";
 import type { OrderDoc } from "../models/Order.js";
@@ -138,6 +139,12 @@ export function toSettingsDTO(settings: SettingsDoc): StoreSettingsDTO {
       x: settings.socialLinks?.x ?? "",
       youtube: settings.socialLinks?.youtube ?? "",
     },
+    // Records saved before these fields existed are read with the defaults.
+    whatsappOrderingEnabled: settings.whatsappOrderingEnabled ?? true,
+    whatsappGreeting: settings.whatsappGreeting ?? "",
+    whatsappSupportMessage: settings.whatsappSupportMessage ?? "",
+    notifications: { ...DEFAULT_NOTIFICATION_SETTINGS, ...settings.notifications },
+    storefront: { ...DEFAULT_STOREFRONT_SETTINGS, ...settings.storefront },
     updatedAt: toISO(settings.updatedAt),
   };
 }

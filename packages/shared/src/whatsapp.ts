@@ -22,6 +22,8 @@ export interface WhatsAppOrderMessageInput {
   deliveryAddress?: string;
   notes?: string;
   previewUrl?: string;
+  /** Opening line set by the store, e.g. "Good day ABA Mart,". Defaults to "Hello <store name>,". */
+  greeting?: string;
 }
 
 /**
@@ -32,7 +34,7 @@ export function buildOrderMessage(input: WhatsAppOrderMessageInput): string {
   const lines: string[] = [];
   const storeName = cleanText(input.storeName) || "ABA Mart";
 
-  lines.push(`Hello ${storeName},`, "");
+  lines.push(cleanText(input.greeting ?? "") || `Hello ${storeName},`, "");
   lines.push("I would like to place an order.", "");
   lines.push(`Order Reference: ${input.orderReference}`, "");
   lines.push("Products:", "");

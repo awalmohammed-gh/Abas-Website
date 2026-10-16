@@ -19,14 +19,14 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
   const soldOut = !product.inStock;
 
   return (
-    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card transition-shadow hover:shadow-pop/40">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-line bg-white shadow-card">
       <Link href={href} className="relative block aspect-square overflow-hidden bg-cream-200" tabIndex={-1} aria-hidden="true">
         <ProductImage
           src={product.images[0]?.url}
           alt={product.images[0]?.alt || product.name}
           sizes="(min-width: 1280px) 290px, (min-width: 1024px) 23vw, (min-width: 640px) 31vw, 48vw"
           priority={priority}
-          className={cn("transition-transform duration-500 group-hover:scale-[1.04]", soldOut && "opacity-60 grayscale-35")}
+          className={cn("transition-[scale] duration-500 ease-out-soft group-hover:scale-[1.04]", soldOut && "opacity-60 grayscale-35")}
         />
         <div className="absolute left-2 top-2 flex flex-col gap-1">
           {discount && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-brand-deep">-{discount}%</span>}
@@ -39,7 +39,7 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
           <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted">{product.subCategory || product.category?.name}</p>
         )}
         <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink sm:text-[15px]">
-          <Link href={href} className="hover:text-brand">
+          <Link href={href} className="transition-colors duration-200 hover:text-brand">
             {product.name}
           </Link>
         </h3>

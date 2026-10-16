@@ -80,7 +80,7 @@ function OrderSent({ order }: { order: LastOrder }) {
   );
 }
 
-export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
+export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled: boolean; whatsappNotice?: string | null }) {
   const { lines, hydrated, itemCount, subtotal, clear, applyQuote, quote, pending: checking, error, refresh } = useCart();
   const lastOrder = useLastOrder();
   const searchParams = useSearchParams();
@@ -100,7 +100,7 @@ export function CartView({ whatsappEnabled }: { whatsappEnabled: boolean }) {
     return !!issue;
   });
   const blockedReason = error ? "Refresh your cart before continuing." : !whatsappEnabled
-    ? "WhatsApp ordering is being set up. Please check back soon."
+    ? whatsappNotice ?? "WhatsApp ordering is being set up. Please check back soon."
     : blockingIssue
       ? "Adjust the quantities or remove unavailable items to continue."
       : null;

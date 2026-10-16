@@ -65,6 +65,38 @@ export const PRODUCT_SORT_LABELS: Record<ProductSort, string> = {
 export const UPLOAD_FOLDERS = ["products", "categories", "banners", "branding"] as const;
 export type UploadFolder = (typeof UPLOAD_FOLDERS)[number];
 
+/* ------------------------------------------------------------ Notifications */
+
+export const NOTIFICATION_TYPES = ["new_product", "promotion", "announcement", "important", "order_alert", "order_update"] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+/** Types an admin can publish to customers. Order alerts are created by the system for admins only. */
+export const CUSTOMER_NOTIFICATION_TYPES = ["new_product", "promotion", "announcement", "important"] as const;
+export type CustomerNotificationType = (typeof CUSTOMER_NOTIFICATION_TYPES)[number] | "order_update";
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  new_product: "New product",
+  promotion: "Promotion",
+  announcement: "Store announcement",
+  important: "Important update",
+  order_alert: "Order alert",
+  order_update: "Order update",
+};
+
+/**
+ * public: in-app feed for every visitor (promotions only for visitors who opted in) and push to opted-in subscribers.
+ * push_subscribers: push only, plus the feed of visitors whose browser is subscribed.
+ * admin: dashboard only.
+ * customer: a system order update for one owning guest session; never a broadcast.
+ */
+export const NOTIFICATION_AUDIENCES = ["public", "push_subscribers", "admin", "customer"] as const;
+export type NotificationAudience = (typeof NOTIFICATION_AUDIENCES)[number];
+
+export const NOTIFICATION_POLL_MS = {
+  admin: 15_000,
+  customer: 15_000,
+} as const;
+
 export const LIMITS = {
   maxCartLines: 50,
   maxLineQuantity: 99,

@@ -1,4 +1,11 @@
-import type { AdminRole, FulfillmentMethod, OrderStatus } from "./constants.js";
+import type {
+  AdminRole,
+  CustomerNotificationType,
+  FulfillmentMethod,
+  NotificationAudience,
+  NotificationType,
+  OrderStatus,
+} from "./constants.js";
 
 /* ------------------------------------------------------------------ API */
 
@@ -133,6 +140,24 @@ export interface SocialLinks {
   youtube: string;
 }
 
+export interface NotificationSettings {
+  /** Master switch for the customer notification bell, opt-in invitation and customer pushes. */
+  enabled: boolean;
+  /** Whether new-product announcements can be published to customers. */
+  newProducts: boolean;
+  /** Whether promotional offers can be published (still only to customers who opted in). */
+  promotions: boolean;
+  /** Dashboard alerts when a customer prepares a WhatsApp checkout request. */
+  adminOrderAlerts: boolean;
+  /** Seconds a visitor browses before the opt-in invitation may appear. */
+  promptDelaySeconds: number;
+}
+
+export interface StorefrontSettings {
+  showFeaturedProducts: boolean;
+  showNewArrivals: boolean;
+}
+
 export interface StoreSettingsDTO {
   storeName: string;
   storeDescription: string;
@@ -140,13 +165,110 @@ export interface StoreSettingsDTO {
   favicon: ImageAsset | null;
   /** International digits without "+", e.g. 233241234567. Empty when not configured. */
   whatsappNumber: string;
+  /** When false, the cart cannot prepare WhatsApp checkout requests. Chat links stay available. */
+  whatsappOrderingEnabled: boolean;
+  /** Opening line of every order message. Empty means "Hello <store name>,". */
+  whatsappGreeting: string;
+  /** Pre-filled text for general "Chat with us" links. Empty uses a default per page. */
+  whatsappSupportMessage: string;
   supportPhone: string;
   supportEmail: string;
   address: string;
   openingHours: string;
   announcement: string;
   socialLinks: SocialLinks;
+  notifications: NotificationSettings;
+  storefront: StorefrontSettings;
   updatedAt: string | null;
+}
+
+/* -------------------------------------------------------- Notifications */
+
+export interface NotificationPreferences {
+  newProducts: boolean;
+  promotions: boolean;
+}
+
+export interface CustomerNotificationDTO {
+  id: string;
+  title: string;
+  message: string;
+  type: CustomerNotificationType;
+  /** Site path to open, e.g. "/products/shea-soap". Empty when the notification has no link. */
+  targetUrl: string;
+  publishedAt: string;
+  read: boolean;
+}
+
+export interface NotificationFeedDTO {
+  /** False when the store has switched customer notifications off. */
+  enabled: boolean;
+  items: CustomerNotificationDTO[];
+  unreadCount: number;
+  /** This visitor's choices, or null before a guest session exists. */
+  preferences: NotificationPreferences | null;
+  /** Which optional categories the store currently publishes. */
+  available: NotificationPreferences;
+  /** Changes whenever store settings change, so open tabs can refresh. */
+  settingsVersion: string | null;
+  /** Seconds a visitor browses before the push opt-in invitation may appear. */
+  promptDelaySeconds: number;
+}
+
+export type PushDeliveryStatus = "not_sent" | "queued" | "sending" | "completed" | "failed";
+
+export interface PushDeliveryDTO {
+  status: PushDeliveryStatus;
+  /** Subscriptions selected for this notification. */
+  targeted: number;
+  /** Accepted by the browser's push service. This is not proof the device displayed it. */
+  accepted: number;
+  failed: number;
+  /** Subscriptions switched off because the push service reported them expired. */
+  deactivated: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  errors: string[];
+}
+
+export interface AdminNotificationDTO {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  audience: NotificationAudience;
+  targetUrl: string;
+  status: "draft" | "published";
+  sendPush: boolean;
+  publishedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  createdBy: { id: string; name: string } | null;
+  orderId: string | null;
+  /** Current status of the linked order, so alerts show whether it was confirmed since. */
+  orderStatus: OrderStatus | null;
+  /** Read by the signed-in admin. */
+  read: boolean;
+  push: PushDeliveryDTO;
+}
+
+export interface AdminNotificationSummary {
+  unreadCount: number;
+  latest: AdminNotificationDTO[];
+}
+
+export interface PushSubscriberStats {
+  /** False when VAPID keys are not configured on the server. */
+  configured: boolean;
+  active: number;
+  inactive: number;
+  newProducts: number;
+  promotions: number;
+}
+
+export interface PushConfigDTO {
+  enabled: boolean;
+  publicKey: string | null;
 }
 
 /* -------------------------------------------------------------- Orders */

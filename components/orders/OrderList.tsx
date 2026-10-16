@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiPackage, FiRefreshCw } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { formatGHS, formatPhoneDisplay, type CustomerOrderDTO, type Paginated } from "@aba-mart/shared";
@@ -13,6 +14,7 @@ import { errorMessage } from "@/lib/api";
 import { ensureGuestSession, GUEST_CHANGED_EVENT, guestApi } from "@/lib/guest-api";
 import { initiateOrderHandoff } from "@/lib/order-handoff";
 import { GuestPrivacy } from "./GuestPrivacy";
+import { useNotifications } from "@/contexts/NotificationsContext";
 
 function OrderItems({ order }: { order: CustomerOrderDTO }) {
   return <ul className="divide-y divide-line">
@@ -48,13 +50,17 @@ function OrderActions({ order, onDetails }: { order: CustomerOrderDTO; onDetails
       {onDetails && <Button variant="secondary" onClick={onDetails}>View details</Button>}
       <ButtonLink href={order.previewUrl} external variant="secondary">Product preview</ButtonLink>
       {order.whatsappUrl && <Button variant="whatsapp" loading={busy} onClick={resume} leftIcon={<FaWhatsapp aria-hidden="true" />}>Continue on WhatsApp</Button>}
-      {order.contactUrl && <ButtonLink href={order.contactUrl} external variant="secondary">Contact ABA Mart</ButtonLink>}
+      {order.contactUrl && <ButtonLink href={order.contactUrl} external variant="secondary">Contact us on WhatsApp</ButtonLink>}
     </div>
     {error && <p className="mt-3 text-sm text-danger" role="alert">{error}</p>}
   </div>;
 }
 
 export function OrderList() {
+  const router = useRouter();
+  const openOrderId = useSearchParams().get("open");
+  const { feed } = useNotifications();
+  const latestUpdate = feed?.items.find((item) => item.type === "order_update")?.id;
   const [result, setResult] = useState<Paginated<CustomerOrderDTO> | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -64,6 +70,20 @@ export function OrderList() {
   const visit = useRef(0);
   const refresh = useCallback(() => setReload((value) => value + 1), []);
 
+  // Notification links open the matching order even when it is on another page.
+  // The API enforces ownership; a URL or order id alone grants no access.
+  useEffect(() => {
+    if (!openOrderId || !/^[a-f\d]{24}$/i.test(openOrderId)) return;
+    let active = true;
+    const currentVisit = visit.current;
+    guestApi.get<CustomerOrderDTO>(`/my-orders/${openOrderId}`).then((order) => {
+      if (active && visit.current === currentVisit) setSelected(order);
+    }).catch((cause: unknown) => {
+      if (active && visit.current === currentVisit) setError(errorMessage(cause));
+    });
+    return () => { active = false; };
+  }, [openOrderId, latestUpdate]);
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -72,7 +92,10 @@ export function OrderList() {
       try {
         await ensureGuestSession(true);
         const orders = await guestApi.get<Paginated<CustomerOrderDTO>>(`/my-orders?page=${page}`);
-        if (active) setResult(orders);
+        if (active) {
+          setResult(orders);
+          setSelected((current) => current ? orders.items.find((order) => order.id === current.id) ?? current : null);
+        }
       } catch (cause) {
         if (active) { setResult(null); setError(errorMessage(cause)); }
       } finally {
@@ -88,7 +111,7 @@ export function OrderList() {
       window.removeEventListener(GUEST_CHANGED_EVENT, onGuestChanged);
       window.removeEventListener("focus", refresh);
     };
-  }, [page, reload, refresh]);
+  }, [page, reload, refresh, latestUpdate]);
 
   async function details(id: string) {
     const currentVisit = visit.current;
@@ -112,7 +135,7 @@ export function OrderList() {
         </div>
         <OrderItems order={order} />
         <div className="mb-4 flex items-center justify-between border-t border-line pt-4"><p className="text-sm text-muted">{order.itemCount} item{order.itemCount === 1 ? "" : "s"}</p><p className="text-xl font-bold">{formatGHS(order.total)}</p></div>
-        {order.status === "WhatsApp Pending" && <p className="mb-4 rounded-xl bg-accent-50 p-3 text-sm leading-relaxed text-accent-700">Your WhatsApp order request has been prepared. ABA Mart will confirm your order after receiving your message.</p>}
+        {order.status === "WhatsApp Pending" && <p className="mb-4 rounded-xl bg-accent-50 p-3 text-sm leading-relaxed text-accent-700">Your WhatsApp order request has been prepared. We will confirm your order after receiving your message.</p>}
         <OrderActions order={order} onDetails={() => void details(order.id)} />
       </article>)}</div>}
     {result && result.totalPages > 1 && <nav aria-label="Order history pages" className="flex items-center justify-center gap-4">
@@ -121,7 +144,7 @@ export function OrderList() {
       <Button variant="secondary" disabled={page >= result.totalPages || loading} onClick={() => setPage((value) => value + 1)}>Next</Button>
     </nav>}
     <GuestPrivacy onChanged={() => { setSelected(null); setResult(null); setPage(1); refresh(); }} />
-    <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.orderReference ?? "Order details"} description="Your saved order details" size="lg">
+    <Modal open={!!selected} onClose={() => { setSelected(null); if (openOrderId) router.replace("/my-orders", { scroll: false }); }} title={selected?.orderReference ?? "Order details"} description="Your saved order details" size="lg">
       {selected && <div className="space-y-5">
         <Badge tone="brand">{selected.status}</Badge>
         <OrderItems order={selected} />

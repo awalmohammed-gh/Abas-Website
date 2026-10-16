@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FULFILLMENT_METHODS, LIMITS, ORDER_STATUSES } from "./constants.js";
+import { CUSTOMER_NOTIFICATION_TYPES, FULFILLMENT_METHODS, LIMITS, ORDER_STATUSES } from "./constants.js";
 import { normalizePhoneNumber } from "./phone.js";
 import { SLUG_PATTERN } from "./text.js";
 
@@ -211,6 +211,32 @@ export type BannerInput = z.output<typeof bannerInputSchema>;
 
 /* ------------------------------------------------------------------ Settings */
 
+export const DEFAULT_NOTIFICATION_SETTINGS = {
+  enabled: true,
+  newProducts: true,
+  promotions: true,
+  adminOrderAlerts: true,
+  promptDelaySeconds: 30,
+} as const;
+
+export const DEFAULT_STOREFRONT_SETTINGS = {
+  showFeaturedProducts: true,
+  showNewArrivals: true,
+} as const;
+
+export const notificationSettingsSchema = z.object({
+  enabled: z.boolean(),
+  newProducts: z.boolean(),
+  promotions: z.boolean(),
+  adminOrderAlerts: z.boolean(),
+  promptDelaySeconds: z.int("Enter whole seconds").min(5, "Use at least 5 seconds").max(600, "Use 600 seconds or fewer"),
+});
+
+export const storefrontSettingsSchema = z.object({
+  showFeaturedProducts: z.boolean(),
+  showNewArrivals: z.boolean(),
+});
+
 export const settingsInputSchema = z.object({
   storeName: z.string().trim().min(2, "Store name is required").max(60),
   storeDescription: optionalText(500, "Description"),
@@ -244,9 +270,93 @@ export const settingsInputSchema = z.object({
       youtube: httpsUrlOrEmpty,
     })
     .default({ facebook: "", instagram: "", tiktok: "", x: "", youtube: "" }),
+  whatsappOrderingEnabled: z.boolean().default(true),
+  whatsappGreeting: optionalText(120, "Greeting"),
+  whatsappSupportMessage: optionalText(300, "Support message"),
+  notifications: notificationSettingsSchema.default(DEFAULT_NOTIFICATION_SETTINGS),
+  storefront: storefrontSettingsSchema.default(DEFAULT_STOREFRONT_SETTINGS),
 });
 
 export type SettingsInput = z.output<typeof settingsInputSchema>;
+
+/* -------------------------------------------------------------- Notifications */
+
+/**
+ * Site path a notification opens: "/shop" or "/products/x?ref=push". Absolute
+ * URLs, protocol-relative "//host" and backslash tricks are rejected so a
+ * notification can never send customers to another website.
+ */
+export function isSafeSitePath(value: string): boolean {
+  return /^\/(?![/\\])[^\s\\]*$/.test(value) && !/^\/admin(?:[/?#]|$)/i.test(value);
+}
+
+export const notificationTargetSchema = z
+  .string()
+  .trim()
+  .max(300, "Link must be 300 characters or fewer")
+  .refine((v) => v === "" || isSafeSitePath(v), { message: "Use a store page path such as /shop or /products/your-product" })
+  .default("");
+
+export const notificationInputSchema = z.object({
+  title: z.string("Title is required").trim().min(3, "Title must be at least 3 characters").max(80, "Title must be 80 characters or fewer"),
+  message: z.string().trim().max(300, "Message must be 300 characters or fewer").default(""),
+  type: z.enum(CUSTOMER_NOTIFICATION_TYPES, "Choose a notification type"),
+  audience: z.enum(["public", "push_subscribers"], "Choose who receives it").default("public"),
+  targetUrl: notificationTargetSchema,
+  expiresAt: z.iso.datetime({ offset: true, error: "Enter a valid end date" }).nullable().default(null),
+  sendPush: z.boolean().default(true),
+  /** Publish immediately instead of saving a draft. */
+  publish: z.boolean().default(false),
+}).superRefine((value, ctx) => {
+  if (value.expiresAt && Date.parse(value.expiresAt) <= Date.now()) {
+    ctx.addIssue({ code: "custom", path: ["expiresAt"], message: "The end date must be in the future" });
+  }
+  if (value.audience === "push_subscribers" && !value.sendPush) {
+    ctx.addIssue({ code: "custom", path: ["sendPush"], message: "Push-only notifications must be sent as push" });
+  }
+});
+
+export type NotificationInput = z.output<typeof notificationInputSchema>;
+export type NotificationInputRaw = z.input<typeof notificationInputSchema>;
+
+export const notificationReadSchema = z
+  .object({
+    ids: z.array(objectIdSchema).max(100).optional(),
+    all: z.boolean().optional(),
+  })
+  .refine((v) => v.all === true || (v.ids?.length ?? 0) > 0, { message: "Choose notifications to mark as read" });
+
+export const notificationPreferencesSchema = z.object({
+  newProducts: z.boolean(),
+  promotions: z.boolean(),
+});
+
+/** Deletion must explicitly name items or select all; an empty body never deletes anything. */
+export const notificationDeleteSchema = z.object({
+  ids: z.array(objectIdSchema).min(1).max(100).optional(),
+  all: z.literal(true).optional(),
+}).strict().refine((value) => (value.all === true) !== (value.ids !== undefined), { message: "Choose notifications or select all" });
+
+export const adminNotificationDeleteSchema = z.object({
+  ids: z.array(objectIdSchema).min(1).max(100).optional(),
+  all: z.literal(true).optional(),
+  scope: z.enum(["all", "alerts", "customer"]).default("all"),
+}).strict().refine((value) => (value.all === true) !== (value.ids !== undefined), { message: "Choose notifications or select all" });
+
+const base64url = (min: number, max: number) => z.string().regex(new RegExp(`^[A-Za-z0-9_-]{${min},${max}}={0,2}$`), "Invalid key");
+
+export const pushSubscriptionSchema = z.object({
+  subscription: z.object({
+    endpoint: z.url({ protocol: /^https$/, error: "Invalid push endpoint" }).max(1000),
+    expirationTime: z.number().nullable().optional(),
+    keys: z.object({ p256dh: base64url(80, 100), auth: base64url(16, 32) }),
+  }),
+  preferences: notificationPreferencesSchema.optional(),
+});
+
+export const pushUnsubscribeSchema = z.object({
+  endpoint: z.url({ protocol: /^https$/, error: "Invalid push endpoint" }).max(1000),
+});
 
 /* ---------------------------------------------------------- Cart & checkout */
 

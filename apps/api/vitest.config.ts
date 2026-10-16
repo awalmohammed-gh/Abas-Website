@@ -16,6 +16,10 @@ export default defineConfig({
       CLOUDINARY_CLOUD_NAME: "test-cloud",
       CLOUDINARY_API_KEY: "test-key",
       CLOUDINARY_API_SECRET: "test-secret",
+      // Throwaway key pair for tests only; push sends are mocked.
+      VAPID_PUBLIC_KEY: "BF0i2eaga3WeezRBIPfj-4Whu28pV7Mxod-5Z2Kg7lz1zP2daH3mzWR6J1hmfPgy10r5d9nsUTIYRMPKiJsG5KM",
+      VAPID_PRIVATE_KEY: "aAk0JSgJy9QXTP_sUOZFUcrAd7aytikKlq3IpXv-Xk4",
+      VAPID_SUBJECT: "mailto:tests@abamart.test",
     },
   },
 });

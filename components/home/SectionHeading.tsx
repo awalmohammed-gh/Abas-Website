@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { FiArrowRight } from "react-icons/fi";
+import { RevealOnScroll } from "@/components/animations/RevealOnScroll";
 
 export function SectionHeading({
   eyebrow,
@@ -18,7 +19,7 @@ export function SectionHeading({
   id?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
+    <RevealOnScroll className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
       <div className="max-w-2xl">
         {eyebrow && <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">{eyebrow}</p>}
         <h2 id={id} className="text-2xl font-bold text-ink sm:text-3xl">
@@ -27,10 +28,10 @@ export function SectionHeading({
         {description && <p className="mt-2 text-[15px] text-muted">{description}</p>}
       </div>
       {href && (
-        <Link href={href} className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:gap-2.5 hover:underline">
-          {linkLabel} <FiArrowRight className="size-4 transition-all" aria-hidden="true" />
+        <Link href={href} className="group inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+          {linkLabel} <FiArrowRight className="size-4 transition-transform duration-200 ease-out-soft group-hover:translate-x-1" aria-hidden="true" />
         </Link>
       )}
-    </div>
+    </RevealOnScroll>
   );
 }

@@ -8,10 +8,11 @@ import { Logo } from "@/components/brand/Logo";
 import { OrderPreview } from "@/components/orders/OrderPreview";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { getMetadataSettings } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Order product preview",
-  description: "Review the products and totals in an ABA Mart order request.",
+  description: "Review the products and totals in an order request.",
   referrer: "no-referrer",
   robots: { index: false, follow: false, nocache: true },
 };
@@ -25,13 +26,14 @@ async function PreviewContent({ params }: { params: Promise<{ token: string }> }
   try {
     response = await fetch(`${api}/orders/preview/${token}`, { cache: "no-store", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
   } catch {
-    return <EmptyState icon={<FiLink />} title="We couldn’t load this preview" description="Please refresh in a moment. The order request is still saved with ABA Mart." />;
+    return <EmptyState icon={<FiLink />} title="We couldn’t load this preview" description="Please refresh in a moment. The order request is still saved." />;
   }
   if (response.status === 404) notFound();
-  if (response.status === 410) return <div className="rounded-3xl border border-line bg-white p-6"><Logo /><EmptyState icon={<FiClock />} title="This order preview has expired" description="Ask the customer to share a fresh product preview link from My orders. Private order details remain protected." action={<ButtonLink href="/shop">Browse the shop</ButtonLink>} /></div>;
+  const { storeName, logo } = await getMetadataSettings();
+  if (response.status === 410) return <div className="rounded-3xl border border-line bg-white p-6"><Logo storeName={storeName} logo={logo} /><EmptyState icon={<FiClock />} title="This order preview has expired" description="Ask the customer to share a fresh product preview link from My orders. Private order details remain protected." action={<ButtonLink href="/shop">Browse the shop</ButtonLink>} /></div>;
   const payload = await response.json().catch(() => null) as ApiResponse<OrderPreviewDTO> | null;
   if (!response.ok || !payload?.success) return <EmptyState icon={<FiLink />} title="This preview is temporarily unavailable" description="Please try again in a moment." />;
-  return <OrderPreview order={payload.data} />;
+  return <OrderPreview order={payload.data} logo={logo} />;
 }
 
 export default function OrderPreviewPage({ params }: { params: Promise<{ token: string }> }) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isSafeSitePath,
   buildOrderMessage,
   buildWhatsAppUrl,
   canTransitionOrder,
@@ -256,5 +257,30 @@ describe("helpers", () => {
     expect(canTransitionOrder("WhatsApp Pending", "Confirmed")).toBe(true);
     expect(canTransitionOrder("WhatsApp Pending", "Completed")).toBe(false);
     expect(canTransitionOrder("Completed", "Cancelled")).toBe(false);
+  });
+});
+
+describe("notification links", () => {
+  it("allows store paths only", () => {
+    expect(isSafeSitePath("/shop")).toBe(true);
+    expect(isSafeSitePath("/products/liquid-soap?ref=push")).toBe(true);
+    for (const bad of ["https://evil.example", "//evil.example", "/\\evil.example", "/admin", "/admin/orders", "javascript:alert(1)", "/shop page"]) {
+      expect(isSafeSitePath(bad)).toBe(false);
+    }
+  });
+});
+
+describe("order message greeting", () => {
+  const base = {
+    storeName: "ABA Mart",
+    orderReference: "ABA-000001",
+    items: [{ name: "Soap", quantity: 1, unitPrice: 700, lineTotal: 700 }],
+    total: 700,
+    customer: { name: "Ama", phone: "233241234567" },
+    fulfillmentMethod: "pickup" as const,
+  };
+  it("uses the store greeting when set, and the default otherwise", () => {
+    expect(buildOrderMessage(base).split("\n")[0]).toBe("Hello ABA Mart,");
+    expect(buildOrderMessage({ ...base, greeting: "Good day ABA Mart team," }).split("\n")[0]).toBe("Good day ABA Mart team,");
   });
 });

@@ -45,3 +45,7 @@ export const orderLimiter = limiter(15, 30, "Too many order attempts. Please wai
 export const quoteLimiter = limiter(15, 300, "Too many cart checks. Please wait a moment.");
 
 export const uploadLimiter = limiter(15, 100, "Too many uploads. Please wait a few minutes.");
+
+export const pushLimiter = limiter(15, 30, "Too many notification changes. Please wait a few minutes.");
+
+export const publishLimiter = limiter(15, 60, "Too many notifications sent. Please wait a few minutes.");

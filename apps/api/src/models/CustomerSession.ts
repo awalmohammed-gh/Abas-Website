@@ -16,6 +16,8 @@ export interface CustomerSessionDoc {
   recoveryTokenHash: string | null;
   recoveryExpiresAt: Date | null;
   purgeAfter: Date;
+  /** Optional notification categories this visitor chose. Promotions are off until they opt in. */
+  notificationPrefs?: { newProducts: boolean; promotions: boolean };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,10 @@ const schema = new Schema<CustomerSessionDoc>({
   recoveryTokenHash: { type: String, default: null },
   recoveryExpiresAt: { type: Date, default: null },
   purgeAfter: { type: Date, required: true },
+  notificationPrefs: {
+    newProducts: { type: Boolean, default: true },
+    promotions: { type: Boolean, default: false },
+  },
 }, { timestamps: true });
 
 schema.index({ sessionIdHash: 1 }, { unique: true });

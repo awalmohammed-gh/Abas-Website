@@ -6,7 +6,7 @@ import { FiClock, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { formatPhoneDisplay, type SocialLinks } from "@aba-mart/shared";
 import { Logo } from "@/components/brand/Logo";
 import { getCategories, getSettings } from "@/lib/catalog";
-import { whatsappChatUrl } from "@/lib/whatsapp";
+import { supportChatUrl } from "@/lib/whatsapp";
 
 async function copyrightYear() {
   "use cache";
@@ -24,7 +24,7 @@ const SOCIAL: { key: keyof SocialLinks; label: string; icon: IconType }[] = [
 
 export async function Footer() {
   const [settings, categories, year] = await Promise.all([getSettings(), getCategories(), copyrightYear()]);
-  const chatUrl = whatsappChatUrl(settings.whatsappNumber);
+  const chatUrl = supportChatUrl(settings);
   const socials = SOCIAL.filter((s) => settings.socialLinks[s.key]);
 
   return (

@@ -1,6 +1,7 @@
 import { env } from "./config/env.js";
 import { connectMongoDB, disconnectMongoDB } from "../../../config/mongodb.js";
 import { createApp } from "./app.js";
+import { resumePushDeliveries } from "./services/pushService.js";
 
 async function main(): Promise<void> {
   await connectMongoDB(env.mongo);
@@ -8,6 +9,8 @@ async function main(): Promise<void> {
   const server = app.listen(env.PORT, () => {
     console.log(`[api] ABA Mart API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
   });
+  // Finish any push deliveries interrupted by a restart.
+  resumePushDeliveries();
 
   const shutdown = (signal: string) => {
     console.log(`[api] ${signal} received, shutting down`);

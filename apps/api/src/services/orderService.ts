@@ -30,6 +30,8 @@ import { toOrderDTO, type ProductLean } from "../utils/serialize.js";
 import type { AdminOrderQuery } from "../validators/orderSchema.js";
 import { inventoryRows, publicVisibilityFilter } from "./productService.js";
 import { revalidateStorefront } from "./revalidationService.js";
+import { createCustomerOrderUpdate, createPendingCheckoutAlert } from "./notificationService.js";
+import { schedulePushDeliveries } from "./pushService.js";
 import { getSettingsDoc } from "./settingsService.js";
 import { ensureOrderPreview, newOrderPreview, orderPreviewUrl } from "./orderPreviewService.js";
 
@@ -145,7 +147,7 @@ export function formatOrderReference(sequence: number): string {
   return `ABA-${String(sequence).padStart(6, "0")}`;
 }
 
-function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string, replayed: boolean): WhatsAppOrderResult {
+function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string, replayed: boolean, greeting = ""): WhatsAppOrderResult {
   const dto = toOrderDTO(order);
   const previewUrl = orderPreviewUrl(order);
   const message = buildOrderMessage({
@@ -159,6 +161,7 @@ function buildResult(order: OrderDoc, storeName: string, whatsappNumber: string,
     deliveryAddress: order.deliveryAddress,
     notes: order.notes,
     previewUrl,
+    greeting,
   });
   return {
     order: {
@@ -186,6 +189,10 @@ export async function createWhatsAppOrder(input: WhatsAppOrderInput, guest: Cust
   if (!settings.whatsappNumber) {
     throw new ApiError(503, "WHATSAPP_NOT_CONFIGURED", "WhatsApp ordering is not available yet. Please contact the store directly.");
   }
+  if (settings.whatsappOrderingEnabled === false) {
+    throw new ApiError(503, "WHATSAPP_ORDERING_DISABLED", "WhatsApp ordering is paused right now. Please contact the store directly.");
+  }
+  const greeting = settings.whatsappGreeting ?? "";
 
   const hash = requestHash(input);
   const existing = await Order.findOne({ idempotencyKey: input.idempotencyKey }).lean<OrderDoc>();
@@ -193,7 +200,7 @@ export async function createWhatsAppOrder(input: WhatsAppOrderInput, guest: Cust
     if (!existing.guestSession?.equals(guest._id) || existing.requestHash !== hash) {
       throw ApiError.conflict("This checkout was already used for a different order. Please try again.", "IDEMPOTENCY_CONFLICT");
     }
-    return buildResult(await ensureOrderPreview(existing), settings.storeName, settings.whatsappNumber, true);
+    return buildResult(await ensureOrderPreview(existing), settings.storeName, settings.whatsappNumber, true, greeting);
   }
 
   const current = await CustomerSession.findOne(activeGuestFilter(guest)).lean<CustomerSessionDoc>();
@@ -258,12 +265,15 @@ export async function createWhatsAppOrder(input: WhatsAppOrderInput, guest: Cust
       }], { session: transaction });
       return created!;
     });
-    return buildResult(order.toObject(), settings.storeName, settings.whatsappNumber, false);
+    const recorded = order.toObject();
+    // Dashboard alert for the new pending request. A failure here must not block the customer's checkout.
+    createPendingCheckoutAlert(recorded).catch((error: unknown) => console.error("[notifications] order alert failed:", (error as Error).message));
+    return buildResult(recorded, settings.storeName, settings.whatsappNumber, false, greeting);
   } catch (error) {
     // A concurrent duplicate submission won the race: return the recorded order.
     if ((error as { code?: number }).code === 11000 || (error instanceof ApiError && error.code === "CART_CHANGED")) {
       const winner = await Order.findOne({ idempotencyKey: input.idempotencyKey }).lean<OrderDoc>();
-      if (winner?.guestSession?.equals(guest._id) && winner.requestHash === hash) return buildResult(await ensureOrderPreview(winner), settings.storeName, settings.whatsappNumber, true);
+      if (winner?.guestSession?.equals(guest._id) && winner.requestHash === hash) return buildResult(await ensureOrderPreview(winner), settings.storeName, settings.whatsappNumber, true, greeting);
     }
     throw error;
   }
@@ -289,7 +299,7 @@ function toCustomerOrder(order: OrderDoc, settings: SettingsDoc): CustomerOrderD
     previewUrl: orderPreviewUrl(order),
     checkoutHandoffStatus: order.checkoutHandoffStatus ?? "prepared",
     whatsappUrl: order.status === "WhatsApp Pending" && settings.whatsappNumber
-      ? buildResult(order, settings.storeName, settings.whatsappNumber, true).whatsappUrl : null,
+      ? buildResult(order, settings.storeName, settings.whatsappNumber, true, settings.whatsappGreeting ?? "").whatsappUrl : null,
     contactUrl: settings.whatsappNumber
       ? buildWhatsAppUrl(settings.whatsappNumber, `Hello ${settings.storeName}, I'd like help with order ${order.orderReference}.`) : null,
   };
@@ -468,11 +478,13 @@ export async function updateOrderStatus(
     order.status = status;
     order.statusHistory.push({ status, note, changedAt: now, changedBy: new Types.ObjectId(adminId) });
     await order.save({ session });
+    await createCustomerOrderUpdate(order.toObject() as OrderDoc, session);
     changed = true;
     return order.toObject();
   });
 
   if (stockTouched) revalidateStorefront("products");
+  if (changed) schedulePushDeliveries();
   return { order: toOrderDTO(result as OrderDoc), changed };
 }
 

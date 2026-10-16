@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { FiAlertTriangle, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { LIMITS, formatGHS, type QuoteLine } from "@aba-mart/shared";
 import { ProductImage } from "@/components/products/ProductImage";
@@ -12,9 +13,22 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
   const { setQuantity, removeItem, pending } = useCart();
   const max = Math.min(line.maxQuantity, LIMITS.maxLineQuantity);
   const blocked = issue && issue.status !== "ok" && issue.status !== "quantity_adjusted";
+  // The line starts fading out the moment Remove is pressed, while the request runs;
+  // the cart state is never held back for the animation. If removal fails it fades back in.
+  const [leaving, setLeaving] = useState(false);
+  const remove = () => {
+    setLeaving(true);
+    removeItem(line.key).catch(() => setLeaving(false));
+  };
 
   return (
-    <li className={cn("flex gap-3 py-5 sm:gap-4", blocked && "opacity-90")}>
+    <li
+      className={cn(
+        "flex gap-3 py-5 transition-[opacity,translate] duration-200 ease-out-soft sm:gap-4",
+        blocked && "opacity-90",
+        leaving && "pointer-events-none -translate-x-4 opacity-0",
+      )}
+    >
       <Link href={`/products/${line.slug}`} className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-line bg-cream-200 sm:size-24">
         <ProductImage src={line.image} alt={line.name} sizes="96px" />
       </Link>
@@ -62,8 +76,8 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
           </div>
           <button
             type="button"
-            onClick={() => void removeItem(line.key).catch(() => undefined)}
-            disabled={pending}
+            onClick={remove}
+            disabled={pending || leaving}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted hover:bg-danger-50 hover:text-danger"
           >
             <FiTrash2 className="size-4" aria-hidden="true" /> Remove

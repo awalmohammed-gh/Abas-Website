@@ -8,15 +8,16 @@ import { SectionHeading } from "@/components/home/SectionHeading";
 import { ProductDetails } from "@/components/products/ProductDetails";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { getProduct, getSettings } from "@/lib/catalog";
+import { getMetadataSettings, getProduct, getSettings } from "@/lib/catalog";
+import { whatsappOrderingNotice } from "@/lib/whatsapp";
 import { absoluteUrl } from "@/lib/utils";
 
 export async function generateMetadata({ params }: PageProps<"/products/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const result = await getProduct(slug);
+  const [result, { storeName }] = await Promise.all([getProduct(slug), getMetadataSettings()]);
   if (result.status !== "found") return { title: "Product not found", robots: { index: false } };
   const { product } = result;
-  const description = (product.description || `${product.name} available at ABA Mart. Order on WhatsApp.`).slice(0, 160);
+  const description = (product.description || `${product.name} available at ${storeName}. Order on WhatsApp.`).slice(0, 160);
   return {
     title: product.name,
     description,
@@ -110,7 +111,7 @@ async function ProductContent({ params }: { params: PageProps<"/products/[slug]"
         </ol>
       </nav>
 
-      <ProductDetails product={product} whatsappEnabled={!!settings.whatsappNumber} />
+      <ProductDetails product={product} whatsappEnabled={!whatsappOrderingNotice(settings)} whatsappNotice={whatsappOrderingNotice(settings)} />
 
       {related.length > 0 && (
         <section className="mt-16 sm:mt-20" aria-labelledby="related-heading">

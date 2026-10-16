@@ -7,6 +7,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { FiChevronDown, FiMenu, FiSearch, FiShoppingBag, FiX } from "react-icons/fi";
 import type { ImageAsset } from "@aba-mart/shared";
 import { Logo } from "@/components/brand/Logo";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { siteConfig } from "@/config/site";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
@@ -23,9 +24,24 @@ interface NavbarProps {
   storeName: string;
   logo: ImageAsset | null;
   whatsappNumber: string;
+  /** Admin-set text for "Chat with us" links; empty uses the default question. */
+  supportMessage?: string;
   supportPhone: string;
   categories: NavCategory[];
+  /** Store-level switch from Admin → Settings → Notifications. */
+  notificationsEnabled?: boolean;
 }
+
+/**
+ * Desktop nav item: colour eases on hover; the current section gets a short
+ * accent underline that grows in with a transform (no layout change).
+ */
+const navItemClass = (active: boolean) =>
+  cn(
+    "relative rounded-lg px-3 py-2 text-[15px] font-medium transition-colors duration-200 hover:text-brand",
+    "after:pointer-events-none after:absolute after:inset-x-3 after:bottom-0.5 after:h-0.5 after:rounded-full after:bg-accent after:transition-[scale] after:duration-300 after:ease-out-soft",
+    active ? "text-brand after:scale-x-100" : "text-ink after:scale-x-0",
+  );
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
@@ -89,13 +105,10 @@ function CategoriesMenu({ categories, active }: { categories: NavCategory[]; act
         aria-expanded={open}
         aria-controls="categories-menu"
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[15px] font-medium transition-colors hover:text-brand",
-          active || open ? "text-brand" : "text-ink",
-        )}
+        className={cn(navItemClass(active), "inline-flex items-center gap-1", open && "text-brand")}
       >
         Categories
-        <FiChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden="true" />
+        <FiChevronDown className={cn("size-4 transition-transform duration-200 ease-out-soft", open && "rotate-180")} aria-hidden="true" />
       </button>
       {open && (
         <div id="categories-menu" className="absolute left-1/2 top-full z-50 mt-2 w-72 -translate-x-1/2 animate-pop-in rounded-2xl border border-line bg-white p-2 shadow-pop">
@@ -130,12 +143,12 @@ function CategoriesMenu({ categories, active }: { categories: NavCategory[]; act
   );
 }
 
-export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categories }: NavbarProps) {
+export function Navbar({ storeName, logo, whatsappNumber, supportMessage, supportPhone, categories, notificationsEnabled = false }: NavbarProps) {
   const pathname = usePathname();
   const { itemCount, hydrated } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const chatUrl = whatsappChatUrl(whatsappNumber, `Hello ${storeName}, I have a question about a product.`);
+  const chatUrl = whatsappChatUrl(whatsappNumber, supportMessage || `Hello ${storeName}, I have a question about a product.`);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
@@ -161,10 +174,7 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
               key={item.href}
               href={item.href}
               aria-current={isActive(pathname, item.href) ? "page" : undefined}
-              className={cn(
-                "rounded-lg px-3 py-2 text-[15px] font-medium transition-colors hover:text-brand",
-                isActive(pathname, item.href) ? "text-brand" : "text-ink",
-              )}
+              className={navItemClass(isActive(pathname, item.href))}
             >
               {item.label}
             </Link>
@@ -175,10 +185,7 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
               key={item.href}
               href={item.href}
               aria-current={isActive(pathname, item.href) ? "page" : undefined}
-              className={cn(
-                "rounded-lg px-3 py-2 text-[15px] font-medium transition-colors hover:text-brand",
-                isActive(pathname, item.href) ? "text-brand" : "text-ink",
-              )}
+              className={navItemClass(isActive(pathname, item.href))}
             >
               {item.label}
             </Link>
@@ -210,6 +217,8 @@ export function Navbar({ storeName, logo, whatsappNumber, supportPhone, categori
               <span className="sr-only xl:hidden">Chat with us on WhatsApp</span>
             </a>
           )}
+
+          {notificationsEnabled && <NotificationBell storeName={storeName} />}
 
           <Link
             href="/cart"
