@@ -6,14 +6,14 @@
  * There is intentionally no public registration endpoint and no default account.
  */
 import { z } from "zod";
-import { ADMIN_ROLES } from "@aba-mart/shared";
+import { ADMIN_ROLES, adminIdentifierSchema } from "@aba-mart/shared";
 import { connectMongoDB, disconnectMongoDB } from "../../../../config/mongodb.js";
 import { env } from "../config/env.js";
 import { Admin } from "../models/Admin.js";
 import { hashPassword } from "../services/authService.js";
 
 const inputSchema = z.object({
-  ADMIN_EMAIL: z.string("ADMIN_EMAIL is required").trim().toLowerCase().pipe(z.email("ADMIN_EMAIL must be a valid email")),
+  ADMIN_EMAIL: adminIdentifierSchema,
   ADMIN_PASSWORD: z
     .string("ADMIN_PASSWORD is required")
     .min(10, "ADMIN_PASSWORD must be at least 10 characters")

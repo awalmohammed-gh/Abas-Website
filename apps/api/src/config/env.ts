@@ -1,9 +1,10 @@
-import dotenv from "dotenv";
 import { z } from "zod";
 import { normalizePhoneNumber } from "@aba-mart/shared";
+import { environmentAdminSchema } from "./adminCredentials.js";
+import { loadApiEnvironment } from "./loadEnvironment.js";
 
 // Tests provide their own environment and must never pick up real credentials.
-if (process.env.NODE_ENV !== "test") dotenv.config({ quiet: true });
+loadApiEnvironment();
 
 const booleanString = z
   .enum(["true", "false", "1", "0"])
@@ -99,7 +100,7 @@ const envSchema = z
       const storefront = value.STOREFRONT_URL ?? value.CLIENT_ORIGIN[0];
       if (!storefront?.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["STOREFRONT_URL"], message: "Production order previews need an HTTPS storefront URL" });
     }
-  });
+  }).and(environmentAdminSchema);
 
 // Treat empty values in .env files ("COOKIE_DOMAIN=") as unset.
 const raw = Object.fromEntries(
@@ -121,6 +122,13 @@ export const env = {
   isTest: data.NODE_ENV === "test",
   cookieSecure: data.COOKIE_SECURE ?? data.NODE_ENV === "production",
   maxUploadBytes: Math.round(data.MAX_UPLOAD_MB * 1024 * 1024),
+  /** Optional static credentials, applied to the admin account before the API starts. */
+  admin: data.ADMIN_EMAIL && data.ADMIN_PASSWORD ? {
+    email: data.ADMIN_EMAIL,
+    password: data.ADMIN_PASSWORD,
+    name: data.ADMIN_NAME,
+    role: data.ADMIN_ROLE,
+  } : null,
   /** Options for market/config/mongodb.ts */
   mongo: {
     uri: data.MONGODB_URI,

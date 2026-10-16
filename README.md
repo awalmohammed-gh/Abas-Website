@@ -42,10 +42,11 @@ Requirements: Node.js 22.12+ (developed on Node 24), a MongoDB Atlas cluster (or
 ```bash
 npm install
 
-cp apps/api/.env.example apps/api/.env          # fill in MongoDB, JWT, Cloudinary, admin
+cp .env.example .env                           # primary MongoDB, Cloudinary, JWT and static admin credentials
+cp apps/api/.env.example apps/api/.env          # API settings: origins, cookies, revalidation, push
 cp apps/web/.env.example apps/web/.env.local    # API URL, site URL, revalidate secret
 
-npm run create-admin    # creates the first admin from ADMIN_EMAIL / ADMIN_PASSWORD in apps/api/.env
+npm run create-admin    # optional: applies the configured admin manually (also synchronized on API startup)
 npm run dev             # shared (watch) + API on :5000 + web on :3000
 ```
 
@@ -55,6 +56,10 @@ Then:
 2. Check **Settings**. Customer orders go to the WhatsApp number there (pre-filled from `STORE_WHATSAPP_NUMBER`, currently +233 27 885 7814).
 3. Add or edit **categories** and **products** (images, prices, stock, variants).
 4. Optionally add homepage **banners**. Without banners the homepage shows a branded introduction.
+
+The API loads the real `.env` in `market`, in development and in the compiled server. It accepts the existing root names: `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_SECRET_KEY`, `jwt_key`, `admin_email`, and `admin_psd`; these map to the API's canonical settings. `MONGODB_URI` is read directly. Root values take priority over `apps/api/.env`, while explicitly supplied process/deployment variables take priority over both files. Tests never load either real file.
+
+`admin_email` and `admin_psd` define the static admin sign-in credentials. The ID is matched exactly after trimming and lowercasing; it need not be a deliverable email address. At startup, the API creates or synchronizes its MongoDB admin profile using a bcrypt password hash. Unchanged restarts keep existing sessions valid; password, role or account-status changes revoke prior sessions. Restart the API after changing the root `.env`. Neither the password nor signing key is returned to the browser or committed to Git.
 
 ### Starter catalogue from `/data`
 

@@ -417,8 +417,12 @@ export type WhatsAppOrderInput = z.output<typeof whatsappOrderSchema>;
 
 /* --------------------------------------------------------------------- Admin */
 
+/** A configured admin ID can resemble an email without being a deliverable address. */
+export const adminIdentifierSchema = z.string().trim().toLowerCase().min(1, "Admin email or ID is required").max(254)
+  .regex(/^[^\s\u0000-\u001f\u007f]+$/, "Enter your configured admin email or ID");
+
 export const adminLoginSchema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email("Enter a valid email address").max(254)),
+  email: adminIdentifierSchema,
   password: z.string().min(1, "Password is required").max(200),
 });
 

@@ -52,8 +52,8 @@ export function LoginForm() {
         </p>
       )}
       <Input
-        label="Email"
-        type="email"
+        label="Admin email or ID"
+        type="text"
         autoComplete="username"
         required
         value={email}
