@@ -5,7 +5,6 @@
  */
 import { cacheLife, cacheTag } from "next/cache";
 import type {
-  ApiResponse,
   BannerDTO,
   CategoryDTO,
   Paginated,
@@ -15,49 +14,22 @@ import type {
 } from "@aba-mart/shared";
 import { fallbackSettings } from "@/config/site";
 import { buildQuery } from "@/lib/utils";
-
-// On Vercel, the `api` binding (market/vercel.json) injects the API service's internal URL at
-// runtime. It is unset during builds and locally, which fall back to the configured URLs.
-const apiServiceUrl = process.env.API_SERVICE_URL;
+import { catalogCacheLife, fetchCatalogApi as fetchApi, getServerApiUrl, type FetchResult } from "@/lib/catalogTransport";
 
 /** API base URL for server-side requests (prefers the internal service URL). */
-export const SERVER_API_URL = (
-  apiServiceUrl
-    ? new URL("api", apiServiceUrl.endsWith("/") ? apiServiceUrl : `${apiServiceUrl}/`).href
-    : process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
-).replace(/\/+$/, "");
-
-type FetchResult<T> = { ok: true; data: T } | { ok: false; status: number };
+export const SERVER_API_URL = getServerApiUrl();
 
 const building = process.env.NEXT_PHASE === "phase-production-build";
 
-// A preview build cannot reach its own API: bindings resolve at runtime only, and the
-// preview URL is not live yet (and is protected). Production builds read the live site.
-const apiUnreachable = building && Boolean(process.env.VERCEL) && process.env.VERCEL_ENV !== "production";
-
-async function fetchApi<T>(path: string): Promise<FetchResult<T>> {
-  if (apiUnreachable) return { ok: false, status: 0 };
-  try {
-    const res = await fetch(`${SERVER_API_URL}${path}`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(10_000),
-    });
-    const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
-    if (!res.ok || !body?.success) return { ok: false, status: res.status };
-    return { ok: true, data: body.data };
-  } catch {
-    return { ok: false, status: 0 };
-  }
-}
-
 /**
  * Keeps successful results for minutes; failures expire quickly so the page recovers on its own.
- * During a build every result keeps the minutes lifetime: the prerender passes must see the same
- * cache entries, and the page revalidates within a minute at runtime.
+ * Failed build-time reads stay stable across prerender passes and revalidate after one second.
  */
 function lifetimeFor(result: FetchResult<unknown>): void {
-  if (result.ok || result.status === 404 || building) cacheLife("minutes");
-  else cacheLife("seconds");
+  const lifetime = catalogCacheLife(result, building);
+  if (lifetime === "minutes") cacheLife("minutes");
+  else if (lifetime === "seconds") cacheLife("seconds");
+  else cacheLife(lifetime);
 }
 
 /**
@@ -68,8 +40,10 @@ function lifetimeFor(result: FetchResult<unknown>): void {
 export async function getMetadataSettings(): Promise<StoreSettingsDTO> {
   "use cache";
   cacheTag("settings");
-  cacheLife("minutes");
   const result = await fetchApi<StoreSettingsDTO>("/settings/public");
+  // Metadata must stay prerenderable even when the API is unavailable.
+  if (result.ok) cacheLife("minutes");
+  else cacheLife({ stale: 30, revalidate: 1, expire: 300 });
   return result.ok ? result.data : fallbackSettings;
 }
 

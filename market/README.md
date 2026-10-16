@@ -196,7 +196,7 @@ All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted on
 
 Storefront pages read the catalogue on the server with `"use cache"` and tags (`products`, `categories`, `banners`, `settings`). After any admin change the API calls `POST /api/revalidate` on the web app (shared `REVALIDATE_SECRET`), so changes appear immediately. Without that, cached pages refresh within about a minute.
 
-If the API is unreachable, failed reads are cached for seconds only and the page shows an honest "couldn't load" state, so the web app also **builds without the API running**.
+If the API is unreachable, failed reads are cached for seconds only and the page shows an honest "couldn't load" state, so the web app also **builds without the API running**. Requests allow time for the API's database initialization and retry temporary failures once. Failed prerender reads stay stable during builds but revalidate after one second instead of preserving an empty storefront for minutes.
 
 The cart quote and checkout always hit the API directly, so stock and prices are never served from a stale cache.
 
@@ -208,7 +208,8 @@ The cart quote and checkout always hit the API directly, so stock and prices are
 
 - **Public routes:** `/api/revalidate` → `web`; every other `/api/*` → `api` (it receives the original path, so the Express routes match unchanged); everything else → `web`.
 - **Binding:** `web` → `api` injects `API_SERVICE_URL`, which server-side rendering uses to call the API internally (`apps/web/src/lib/catalog.ts`). Bindings exist at runtime only; builds and local runs fall back to `API_INTERNAL_URL` / `NEXT_PUBLIC_API_URL`. Vercel rejects circular bindings, so the API reaches `/api/revalidate` over the public URL instead.
-- **Builds:** preview builds cannot reach their own API, so the catalogue treats it as offline; production builds read the live site. Every build-time read is cached for minutes (Vercel requires stable entries between prerender passes) and revalidates within a minute at runtime.
+- **Builds:** preview builds cannot reach their own API, so the catalogue treats it as offline; production builds read the live site. Successful reads revalidate within a minute. Failed build reads use a five-minute expiry for stable prerender passes, with one-second revalidation and a short client cache.
+- **Images:** a custom Next.js image loader uses Cloudinary's responsive transformations directly. Local public images use their file URLs. This avoids the unavailable `/_next/image` endpoint in this Services deployment.
 
 1. Project settings: **Framework Preset** `Services`, **Root Directory** empty (the folder holding `vercel.json`). Each service sets its own build command (shared → app).
 2. Add the secrets as environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `REVALIDATE_SECRET`, `STORE_WHATSAPP_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Give **Preview** its own `MONGODB_DB_NAME` and `CLOUDINARY_FOLDER` (this project uses `aba-mart-e2e`) so previews never touch real data. Do not copy `NODE_ENV`, `PORT`, `DNS_SERVERS`, `ALLOWED_DEV_ORIGINS` or the localhost URLs.
