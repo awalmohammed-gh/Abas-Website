@@ -14,10 +14,7 @@ import type {
 } from "@aba-mart/shared";
 import { fallbackSettings } from "@/config/site";
 import { buildQuery } from "@/lib/utils";
-import { catalogCacheLife, fetchCatalogApi as fetchApi, getServerApiUrl, type FetchResult } from "@/lib/catalogTransport";
-
-/** API base URL for server-side requests (prefers the internal service URL). */
-export const SERVER_API_URL = getServerApiUrl();
+import { catalogCacheLife, fetchCatalogApi as fetchApi, type FetchResult } from "@/lib/catalogTransport";
 
 const building = process.env.NEXT_PHASE === "phase-production-build";
 
