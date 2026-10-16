@@ -1,0 +1,152 @@
+import { z } from "zod";
+import { normalizePhoneNumber } from "@aba-mart/shared";
+import { environmentAdminSchema } from "./adminCredentials.js";
+import { loadApiEnvironment } from "./loadEnvironment.js";
+
+// Tests provide their own environment and must never pick up real credentials.
+loadApiEnvironment();
+
+const booleanString = z
+  .enum(["true", "false", "1", "0"])
+  .transform((value) => value === "true" || value === "1");
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+
+    MONGODB_URI: z
+      .string("MONGODB_URI is required")
+      .refine((v) => /^mongodb(\+srv)?:\/\//.test(v), "MONGODB_URI must start with mongodb:// or mongodb+srv://"),
+    MONGODB_DB_NAME: z.string().min(1).default("aba-mart"),
+    /** Optional DNS resolvers for mongodb+srv lookups, e.g. "1.1.1.1,8.8.8.8". */
+    DNS_SERVERS: z
+      .string()
+      .transform((v) => v.split(",").map((s) => s.trim()).filter(Boolean))
+      .refine((servers) => servers.every((s) => /^[\d.:a-f]+$/i.test(s)), "DNS_SERVERS must be a comma-separated list of IP addresses")
+      .optional(),
+
+    JWT_SECRET: z.string("JWT_SECRET is required").min(32, "JWT_SECRET must be at least 32 characters"),
+    JWT_EXPIRES_IN_HOURS: z.coerce.number().int().min(1).max(168).default(8),
+
+    CLIENT_ORIGIN: z
+      .string("CLIENT_ORIGIN is required")
+      .transform((v) =>
+        v
+          .split(",")
+          .map((origin) => origin.trim().replace(/\/+$/, ""))
+          .filter(Boolean),
+      )
+      .refine((origins) => origins.length > 0, "CLIENT_ORIGIN must list at least one origin")
+      .refine((origins) => origins.every((o) => /^https?:\/\/[^/\s]+$/.test(o)), "CLIENT_ORIGIN entries must look like https://example.com"),
+
+    COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+    COOKIE_SECURE: booleanString.optional(),
+    COOKIE_DOMAIN: z.string().optional(),
+    TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
+
+    CLOUDINARY_CLOUD_NAME: z.string("CLOUDINARY_CLOUD_NAME is required").min(1),
+    CLOUDINARY_API_KEY: z.string("CLOUDINARY_API_KEY is required").min(1),
+    CLOUDINARY_API_SECRET: z.string("CLOUDINARY_API_SECRET is required").min(1),
+    CLOUDINARY_FOLDER: z
+      .string()
+      .regex(/^[a-z0-9_-]+$/i, "CLOUDINARY_FOLDER may only contain letters, numbers, - and _")
+      .default("aba-mart"),
+    MAX_UPLOAD_MB: z.coerce.number().min(1).max(10).default(4),
+
+    /** WhatsApp number used when store settings are first created. Admins can change it later in Settings. */
+    STORE_WHATSAPP_NUMBER: z
+      .string()
+      .transform((value, ctx) => {
+        const normalized = normalizePhoneNumber(value);
+        if (!normalized) {
+          ctx.addIssue({ code: "custom", message: "STORE_WHATSAPP_NUMBER must be a phone number with country code, e.g. +233241234567" });
+          return z.NEVER;
+        }
+        return normalized;
+      })
+      .optional(),
+
+    WEB_REVALIDATE_URL: z.url().optional(),
+    STOREFRONT_URL: z.url().refine((value) => /^https?:\/\//.test(value), "STOREFRONT_URL must use http or https").optional(),
+    REVALIDATE_SECRET: z.string().min(24, "REVALIDATE_SECRET must be at least 24 characters").optional(),
+
+    /** Web Push (VAPID). Push is disabled until all three are set; the private key never leaves the server. */
+    VAPID_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]{80,100}$/, "VAPID_PUBLIC_KEY must be a base64url key").optional(),
+    VAPID_PRIVATE_KEY: z.string().regex(/^[A-Za-z0-9_-]{40,50}$/, "VAPID_PRIVATE_KEY must be a base64url key").optional(),
+    VAPID_SUBJECT: z.string().regex(/^(mailto:\S+@\S+|https:\/\/\S+)$/, "VAPID_SUBJECT must be mailto:you@example.com or an https:// URL").optional(),
+  })
+  .superRefine((value, ctx) => {
+    const secure = value.COOKIE_SECURE ?? value.NODE_ENV === "production";
+    if (value.COOKIE_SAME_SITE === "none" && !secure) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["COOKIE_SECURE"],
+        message: "COOKIE_SAME_SITE=none requires secure cookies (COOKIE_SECURE=true)",
+      });
+    }
+    if (value.WEB_REVALIDATE_URL && !value.REVALIDATE_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["REVALIDATE_SECRET"],
+        message: "REVALIDATE_SECRET is required when WEB_REVALIDATE_URL is set",
+      });
+    }
+    const vapid = [value.VAPID_PUBLIC_KEY, value.VAPID_PRIVATE_KEY, value.VAPID_SUBJECT].filter(Boolean).length;
+    if (vapid !== 0 && vapid !== 3) {
+      ctx.addIssue({ code: "custom", path: ["VAPID_PRIVATE_KEY"], message: "Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT together (or none to disable push)" });
+    }
+    if (value.NODE_ENV === "production") {
+      const storefront = value.STOREFRONT_URL ?? value.CLIENT_ORIGIN[0];
+      if (!storefront?.startsWith("https://")) ctx.addIssue({ code: "custom", path: ["STOREFRONT_URL"], message: "Production order previews need an HTTPS storefront URL" });
+    }
+  }).and(environmentAdminSchema);
+
+// Treat empty values in .env files ("COOKIE_DOMAIN=") as unset.
+const raw = Object.fromEntries(
+  Object.entries(process.env).filter(([, value]) => value !== undefined && value.trim() !== ""),
+);
+
+const parsed = envSchema.safeParse(raw);
+
+if (!parsed.success) {
+  const problems = parsed.error.issues.map((issue) => `  - ${issue.path.join(".") || "env"}: ${issue.message}`);
+  throw new Error(`Invalid environment configuration:\n${problems.join("\n")}\nSee market/.env.example.`);
+}
+
+const data = parsed.data;
+
+export const env = {
+  ...data,
+  isProduction: data.NODE_ENV === "production",
+  isTest: data.NODE_ENV === "test",
+  cookieSecure: data.COOKIE_SECURE ?? data.NODE_ENV === "production",
+  maxUploadBytes: Math.round(data.MAX_UPLOAD_MB * 1024 * 1024),
+  /** Optional static credentials, applied to the admin account before the API starts. */
+  admin: data.ADMIN_EMAIL && data.ADMIN_PASSWORD ? {
+    email: data.ADMIN_EMAIL,
+    password: data.ADMIN_PASSWORD,
+    name: data.ADMIN_NAME,
+    role: data.ADMIN_ROLE,
+  } : null,
+  /** Options for market/config/mongodb.ts */
+  mongo: {
+    uri: data.MONGODB_URI,
+    dbName: data.MONGODB_DB_NAME,
+    dnsServers: data.DNS_SERVERS,
+    log: data.NODE_ENV !== "test",
+  },
+  /** Credentials for market/config/cloudinary.ts */
+  cloudinary: {
+    cloudName: data.CLOUDINARY_CLOUD_NAME,
+    apiKey: data.CLOUDINARY_API_KEY,
+    apiSecret: data.CLOUDINARY_API_SECRET,
+  },
+  /** Web Push credentials, or null when push is not configured. */
+  vapid:
+    data.VAPID_PUBLIC_KEY && data.VAPID_PRIVATE_KEY && data.VAPID_SUBJECT
+      ? { publicKey: data.VAPID_PUBLIC_KEY, privateKey: data.VAPID_PRIVATE_KEY, subject: data.VAPID_SUBJECT }
+      : null,
+} as const;
+
+export type Env = typeof env;

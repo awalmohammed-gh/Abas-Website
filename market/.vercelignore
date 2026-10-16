@@ -1,0 +1,17 @@
+# CLI deployments upload the working tree; keep it in line with .gitignore.
+# Never upload real env files: secrets live in the Vercel project settings.
+.env
+.env.*
+!.env.example
+
+node_modules
+.next
+out
+build
+dist
+*.tsbuildinfo
+coverage
+*.pem
+npm-debug.log*
+.DS_Store
+/type
