@@ -1,11 +1,11 @@
 import { getBanners } from "@/lib/catalog";
-import { heroBanners } from "@/config/hero-banners";
 import { HeroCarousel } from "./HeroCarousel";
 
-/** Product highlights followed by any additional admin-managed promotions. */
+/** Admin-managed banners (Admin → Banners); the homepage skips the hero when there are none. */
 export async function Hero() {
   const banners = await getBanners();
-  return <HeroCarousel banners={[...heroBanners, ...banners]} />;
+  if (!banners.length) return null;
+  return <HeroCarousel banners={banners} />;
 }
 
 export function HeroSkeleton() {

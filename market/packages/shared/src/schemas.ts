@@ -192,6 +192,7 @@ export type CategoryInput = z.output<typeof categoryInputSchema>;
 
 export const bannerInputSchema = z
   .object({
+    eyebrow: optionalText(60, "Small heading"),
     title: z.string().trim().min(2, "Heading must be at least 2 characters").max(90),
     description: optionalText(220, "Description"),
     desktopImage: imageAssetSchema,

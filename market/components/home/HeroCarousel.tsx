@@ -14,9 +14,7 @@ import { cn } from "@/lib/utils";
 const INTERVAL = 6500;
 const SLIDE_DURATION = 0.9;
 
-export type HeroBanner = Pick<BannerDTO, "id" | "title" | "description" | "desktopImage" | "mobileImage" | "buttonText" | "buttonLink"> & {
-  eyebrow?: string;
-};
+export type HeroBanner = Pick<BannerDTO, "id" | "eyebrow" | "title" | "description" | "desktopImage" | "mobileImage" | "buttonText" | "buttonLink">;
 
 /** Art-directed banner: one <picture> so phones only download the mobile crop. */
 function BannerPicture({ banner, priority, className }: { banner: HeroBanner; priority: boolean; className?: string }) {

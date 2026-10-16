@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ApiClientError, api } from "@/lib/api";
 
 interface State {
+  eyebrow: string;
   title: string;
   description: string;
   desktopImage: ImageAsset | null;
@@ -20,6 +21,7 @@ interface State {
 }
 
 const toState = (banner: BannerDTO | null, nextOrder: number): State => ({
+  eyebrow: banner?.eyebrow ?? "",
   title: banner?.title ?? "",
   description: banner?.description ?? "",
   desktopImage: banner?.desktopImage ?? null,
@@ -122,6 +124,7 @@ export function BannerForm({
             error={errors.mobileImage}
           />
         </div>
+        <Input label="Small heading" value={state.eyebrow} onChange={(e) => set("eyebrow", e.target.value)} error={errors.eyebrow} maxLength={60} hint="Optional line above the heading, e.g. a tagline or price" />
         <Input label="Heading" required value={state.title} onChange={(e) => set("title", e.target.value)} error={errors.title} maxLength={90} />
         <Textarea label="Description" rows={2} value={state.description} onChange={(e) => set("description", e.target.value)} error={errors.description} maxLength={220} />
         <div className="grid gap-4 sm:grid-cols-2">

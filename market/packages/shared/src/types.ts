@@ -118,6 +118,8 @@ export interface CategoryDTO {
 
 export interface BannerDTO {
   id: string;
+  /** Short line shown above the heading, e.g. a tagline or price. */
+  eyebrow: string;
   title: string;
   description: string;
   desktopImage: ImageAsset;

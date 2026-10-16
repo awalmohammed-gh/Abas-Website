@@ -107,6 +107,7 @@ export function toCategoryDTO(category: CategoryDoc, productCount?: number): Cat
 export function toBannerDTO(banner: BannerDoc): BannerDTO {
   return {
     id: banner._id.toString(),
+    eyebrow: banner.eyebrow ?? "",
     title: banner.title,
     description: banner.description,
     desktopImage: image(banner.desktopImage)!,

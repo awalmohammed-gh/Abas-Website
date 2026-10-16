@@ -34,6 +34,7 @@ export async function adminUpdateBanner(req: Request, res: Response) {
   const current = toBannerDTO(banner.toObject());
 
   const merged = bannerInputSchema.parse({
+    eyebrow: current.eyebrow,
     title: current.title,
     description: current.description,
     desktopImage: current.desktopImage,

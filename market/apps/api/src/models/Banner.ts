@@ -4,6 +4,7 @@ import { imageAssetSchema } from "./common.js";
 
 export interface BannerDoc {
   _id: Types.ObjectId;
+  eyebrow: string;
   title: string;
   description: string;
   desktopImage: ImageAsset;
@@ -18,6 +19,7 @@ export interface BannerDoc {
 
 const bannerSchema = new Schema<BannerDoc>(
   {
+    eyebrow: { type: String, default: "", trim: true, maxlength: 60 },
     title: { type: String, required: true, trim: true, maxlength: 90 },
     description: { type: String, default: "", trim: true, maxlength: 220 },
     desktopImage: { type: imageAssetSchema, required: true },

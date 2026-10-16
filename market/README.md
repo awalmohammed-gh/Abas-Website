@@ -53,7 +53,7 @@ Then:
 1. Sign in at **http://localhost:3000/admin/login**.
 2. Check **Settings**. Customer orders go to the WhatsApp number there (pre-filled from `STORE_WHATSAPP_NUMBER`, currently +233 27 885 7814).
 3. Add or edit **categories** and **products** (images, prices, stock, variants).
-4. Optionally add homepage **banners**. Without banners the homepage shows a branded introduction.
+4. Manage homepage **banners** (image, small heading, heading, description, button). Without active banners the homepage skips the hero.
 
 `market/.env` is the only env file. The API loads it in development and in the compiled server, and the web app loads it from `next.config.ts` (except `PORT` and `NODE_ENV`, which belong to the API). Explicitly supplied process/deployment variables take priority over the file. The API also still accepts the older names `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_SECRET_KEY`, `jwt_key`, `admin_email`, and `admin_psd`, which map to the canonical settings. Tests never load the real file.
 
