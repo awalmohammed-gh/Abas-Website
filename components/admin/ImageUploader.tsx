@@ -8,12 +8,12 @@ import { Spinner } from "@/components/ui/Spinner";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024;
 const ACCEPT = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 
 async function uploadFile(file: File, folder: UploadFolder): Promise<ImageAsset> {
   if (!ACCEPT.includes(file.type)) throw new Error(`${file.name}: use a JPEG, PNG, WebP or AVIF image.`);
-  if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 5 MB.`);
+  if (file.size > MAX_BYTES) throw new Error(`${file.name} is larger than 4 MB.`);
   const form = new FormData();
   form.append("image", file);
   return api.post<ImageAsset>(`/admin/uploads?folder=${folder}`, form);
@@ -120,7 +120,7 @@ export function ImageListUploader({ value, onChange, folder, max, hint, error }:
         onChange={handleFiles}
         disabled={uploading > 0}
       />
-      <p className="text-xs text-muted">{hint ?? `Up to ${max} images, 5 MB each. JPEG, PNG, WebP or AVIF. The first image is shown on product cards.`}</p>
+      <p className="text-xs text-muted">{hint ?? `Up to ${max} images, 4 MB each. JPEG, PNG, WebP or AVIF. The first image is shown on product cards.`}</p>
       {(uploadError || error) && (
         <p className="text-xs font-medium text-danger" role="alert">
           {uploadError || error}

@@ -12,6 +12,13 @@ if (existsSync(sharedEnvFile)) {
   }
 }
 
+// On Vercel the API runs inside this app (src/pages/api), so it shares the site's URL.
+const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+if (vercelHost) {
+  process.env.NEXT_PUBLIC_SITE_URL ||= `https://${vercelHost}`;
+  process.env.NEXT_PUBLIC_API_URL ||= `https://${vercelHost}/api`;
+}
+
 // Only images from this store's Cloudinary account may be optimised.
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 

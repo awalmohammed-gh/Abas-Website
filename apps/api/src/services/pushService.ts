@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { waitUntil } from "@vercel/functions";
 import webpush, { WebPushError } from "web-push";
 import type { Types } from "mongoose";
 import type { NotificationPreferences, PushConfigDTO, PushSubscriberStats } from "@aba-mart/shared";
@@ -250,6 +251,8 @@ let rerun = false;
  * Sends queued pushes in the background, oldest first, in batches. Publishing
  * returns immediately; progress is recorded on the notification. If the server
  * restarts mid-delivery, resumePushDeliveries() continues from the saved cursor.
+ * On Vercel, waitUntil keeps the function alive until the worker finishes
+ * (elsewhere it does nothing).
  */
 export function schedulePushDeliveries(): void {
   if (!isPushConfigured() || env.isTest) return;
@@ -258,7 +261,7 @@ export function schedulePushDeliveries(): void {
     return;
   }
   running = true;
-  void (async () => {
+  waitUntil((async () => {
     try {
       do {
         rerun = false;
@@ -283,7 +286,7 @@ export function schedulePushDeliveries(): void {
     } finally {
       running = false;
     }
-  })();
+  })());
 }
 
 /** Test hook: runs queued deliveries to completion in the foreground. */

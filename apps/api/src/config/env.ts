@@ -52,7 +52,7 @@ const envSchema = z
       .string()
       .regex(/^[a-z0-9_-]+$/i, "CLOUDINARY_FOLDER may only contain letters, numbers, - and _")
       .default("aba-mart"),
-    MAX_UPLOAD_MB: z.coerce.number().min(1).max(10).default(5),
+    MAX_UPLOAD_MB: z.coerce.number().min(1).max(10).default(4),
 
     /** WhatsApp number used when store settings are first created. Admins can change it later in Settings. */
     STORE_WHATSAPP_NUMBER: z

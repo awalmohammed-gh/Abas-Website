@@ -182,7 +182,7 @@ Landing-page motion uses [Motion](https://motion.dev) (`motion` 13.5.1), kept de
 - CORS allowlist, Helmet headers, rate limits on login, checkout, quotes, uploads and the API overall, and a 100 KB JSON body limit.
 - Every admin route checks the session on the server. The dashboard's client-side gate is only for convenience.
 - Prices and totals from the browser are never trusted. Inputs are validated with Zod (shared schemas), and errors are returned as a consistent JSON shape without stack traces or raw database errors.
-- Uploads accept only JPEG, PNG, WebP or AVIF up to 5 MB. Each file is checked by its signature, not just its declared type. Only Cloudinary URLs from this account and folder are accepted on products, categories, banners and settings.
+- Uploads accept only JPEG, PNG, WebP or AVIF up to 4 MB (Vercel caps request bodies at 4.5 MB). Each file is checked by its signature, not just its declared type. Only Cloudinary URLs from this account and folder are accepted on products, categories, banners and settings.
 - Admin pages send `noindex` (metadata and `X-Robots-Tag`) and are disallowed in `robots.txt`.
 - There is no public registration endpoint and no default admin account.
 
@@ -201,6 +201,19 @@ If the API is unreachable, failed reads are cached for seconds only and the page
 The cart quote and checkout always hit the API directly, so stock and prices are never served from a stale cache.
 
 ## Deployment notes
+
+### Vercel (one project: storefront + API)
+
+On Vercel the Express API runs inside the web app: `apps/web/src/app/api/[...path]/route.ts` hands every `/api/*` request (except `/api/revalidate`) to `apps/api/src/vercel.ts`, which injects it into Express in-process. Store and API share one origin, so session cookies are first-party and need no CORS setup. Locally that route answers 404; the API keeps running as its own server on `:5000`.
+
+1. Import the GitHub repo in Vercel and set **Root Directory** to `apps/web`. `apps/web/vercel.json` sets the build command (shared → API → web).
+2. Add the secrets as environment variables: `MONGODB_URI`, `MONGODB_DB_NAME`, `JWT_SECRET`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER`, `REVALIDATE_SECRET`, `STORE_WHATSAPP_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. Do not copy `NODE_ENV`, `PORT`, `DNS_SERVERS`, `ALLOWED_DEV_ORIGINS` or the localhost URLs.
+3. The site URL settings default from Vercel's production URL (`VERCEL_PROJECT_PRODUCTION_URL`): `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_URL`, `CLIENT_ORIGIN`, `STOREFRONT_URL`, `WEB_REVALIDATE_URL`, plus `TRUST_PROXY=1`, secure `lax` cookies and `MAX_UPLOAD_MB=4`. Set any of them explicitly to override (e.g. after adding a custom domain).
+4. In MongoDB Atlas → Network Access, allow `0.0.0.0/0`, because Vercel functions have no fixed IP.
+
+Serverless differences: push deliveries run under `waitUntil` so they finish after the response; each instance rate-limits on its own; request bodies are capped at 4.5 MB by Vercel.
+
+### Separate servers
 
 - **API** (Render, Railway, a VPS…): `npm run build -w @aba-mart/shared && npm run build -w @aba-mart/api`, then `npm run start:api` (runs `apps/api/dist/apps/api/src/server.js`; the build also compiles `config/`). Set `NODE_ENV=production` and `TRUST_PROXY=1` behind a proxy.
 - **Web** (Vercel or any Node host): build `apps/web` after `packages/shared`. Set `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, `REVALIDATE_SECRET` and `CLOUDINARY_CLOUD_NAME`.
