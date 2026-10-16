@@ -18,20 +18,29 @@ export interface MongoDBOptions {
 }
 
 mongoose.set("strictQuery", true);
+let connecting: Promise<typeof mongoose> | null = null;
 
 /** Opens the shared Mongoose connection, reusing it if it is already open to the same database. */
 export async function connectMongoDB({ uri, dbName, dnsServers, log = true }: MongoDBOptions): Promise<typeof mongoose> {
   const { connection } = mongoose;
   if (connection.readyState === mongoose.ConnectionStates.connected && connection.name === dbName) return mongoose;
+  if (connecting) return connecting;
 
   if (dnsServers?.length) setServers(dnsServers);
-  await mongoose.connect(uri, {
+  const attempt = mongoose.connect(uri, {
     dbName,
     serverSelectionTimeoutMS: 15_000,
     autoIndex: true,
   });
-  if (log) console.log(`[db] connected to database "${dbName}"`);
-  return mongoose;
+  connecting = attempt;
+  try {
+    await attempt;
+    if (log) console.log(`[db] connected to database "${dbName}"`);
+    return mongoose;
+  } finally {
+    // A rejected connection must not prevent the next request from retrying.
+    if (connecting === attempt) connecting = null;
+  }
 }
 
 export async function disconnectMongoDB(): Promise<void> {

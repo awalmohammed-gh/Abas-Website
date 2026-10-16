@@ -34,18 +34,20 @@ function applyVercelDefaults(): void {
 
 let ready: Promise<Express> | null = null;
 
-function prepare(): Promise<Express> {
+async function prepare(): Promise<Express> {
+  applyVercelDefaults();
+  // Modules stay cached, but a database connection can drop while a function is idle.
+  // Check it on every request, including requests to an already-prepared app.
+  const [{ env }, { connectMongoDB }, { createApp }, { resumePushDeliveries }, { synchronizeEnvironmentAdmin }] = await Promise.all([
+    import("./config/env.js"),
+    import("../../../config/mongodb.js"),
+    import("./app.js"),
+    import("./services/pushService.js"),
+    import("./services/adminProvisioningService.js"),
+  ]);
+  await connectMongoDB(env.mongo);
+
   ready ??= (async () => {
-    applyVercelDefaults();
-    // Imported only now, so the defaults above are in place before env.ts validates.
-    const [{ env }, { connectMongoDB }, { createApp }, { resumePushDeliveries }, { synchronizeEnvironmentAdmin }] = await Promise.all([
-      import("./config/env.js"),
-      import("../../../config/mongodb.js"),
-      import("./app.js"),
-      import("./services/pushService.js"),
-      import("./services/adminProvisioningService.js"),
-    ]);
-    await connectMongoDB(env.mongo);
     await synchronizeEnvironmentAdmin(env.admin);
     // Finish any push deliveries a previous instance left unfinished.
     resumePushDeliveries();
@@ -64,6 +66,8 @@ app.use((req, res, next) => {
     (api) => api(req, res, next),
     (error: unknown) => {
       console.error("[api] failed to start:", error instanceof Error ? error.message : error);
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("Retry-After", "5");
       res.status(503).json({ success: false, error: { code: "SERVICE_UNAVAILABLE", message: "The store is temporarily unavailable. Please try again shortly." } });
     },
   );

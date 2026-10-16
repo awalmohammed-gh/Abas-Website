@@ -29,6 +29,7 @@ export function createApp(): Express {
   app.use(originGuard);
 
   app.get("/api/health", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     const database = isMongoDBConnected();
     res.status(database ? 200 : 503).json({
       success: database,
