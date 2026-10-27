@@ -1,4 +1,4 @@
-import { Types, type QueryFilter } from "mongoose";
+import mongoose, { Types, type QueryFilter } from "mongoose";
 import {
   escapeRegExp,
   productInputSchema,
@@ -12,6 +12,7 @@ import {
 } from "@aba-mart/shared";
 import { Category, type CategoryDoc } from "../models/Category.js";
 import { Product, type ProductDoc, type ProductVariantDoc } from "../models/Product.js";
+import { nextSequence } from "../models/Counter.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toAdminProductDTO, toProductDTO, type ProductLean } from "../utils/serialize.js";
 import type { AdminProductQuery, InventoryQuery, PublicProductQuery } from "../validators/productSchema.js";
@@ -231,7 +232,7 @@ export async function updateProduct(id: string, patch: Record<string, unknown>):
 }
 
 /**
- * "Delete" archives the product: it disappears from the store and admin lists
+ * Archive a product: it disappears from the store and default admin lists
  * but stays in the database so past orders still resolve.
  */
 export async function archiveProduct(id: string): Promise<AdminProductDTO> {
@@ -260,6 +261,19 @@ export async function restoreProduct(id: string): Promise<AdminProductDTO> {
     revalidateStorefront("products", "categories");
   }
   return getAdminProduct(id);
+}
+
+/** Permanently remove the catalog record; orders keep their recorded item snapshots. */
+export async function permanentlyDeleteProduct(id: string): Promise<{ id: string; deleted: true }> {
+  await mongoose.connection.transaction(async (session) => {
+    const product = await Product.findByIdAndDelete(id, { session });
+    if (!product) throw ApiError.notFound("Product not found.");
+    // A deletion must refresh storefronts even when another product has a newer updatedAt.
+    await nextSequence("catalog-deletions", session);
+  });
+  // Keep uploaded images available for existing order snapshots.
+  await revalidateStorefront("products", "categories");
+  return { id, deleted: true };
 }
 
 /* --------------------------------------------------------------- Inventory */

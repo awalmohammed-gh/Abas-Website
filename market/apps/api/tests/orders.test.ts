@@ -218,6 +218,20 @@ describe("order status and inventory", () => {
     expect(restored.body.data.items.find((product: { id: string }) => product.id === gel.id)).toMatchObject({ stock: 5, inStock: true });
   });
 
+  it("preserves recorded order items after permanent product deletion", async () => {
+    const order = await pendingOrder([{ productId: gel.id, quantity: 1 }]);
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Confirmed" }).expect(200);
+    const before = (await admin.get(`/api/admin/orders/${order.id}`).expect(200)).body.data;
+    await admin.del(`/api/admin/products/${gel.id}/permanent`).expect(200);
+    const after = (await admin.get(`/api/admin/orders/${order.id}`).expect(200)).body.data;
+    expect(after.items).toEqual(before.items);
+    expect(after.total).toBe(before.total);
+    expect(await Product.findById(gel.id)).toBeNull();
+    // Cancelling an existing order must not recreate a permanently deleted product.
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Cancelled" }).expect(200);
+    expect(await Product.findById(gel.id)).toBeNull();
+  });
+
   it("rejects invalid status transitions", async () => {
     const order = await pendingOrder([{ productId: gel.id, quantity: 1 }]);
     const res = await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Completed" }).expect(409);

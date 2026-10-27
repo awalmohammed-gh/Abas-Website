@@ -46,3 +46,7 @@ export async function adminArchiveProduct(req: Request, res: Response) {
 export async function adminRestoreProduct(req: Request, res: Response) {
   sendSuccess(res, await productService.restoreProduct(id(req)));
 }
+
+export async function adminPermanentlyDeleteProduct(req: Request, res: Response) {
+  sendSuccess(res, await productService.permanentlyDeleteProduct(id(req)));
+}

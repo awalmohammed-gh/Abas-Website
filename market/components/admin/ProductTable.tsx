@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FiArchive, FiEdit2, FiEye, FiEyeOff, FiRotateCcw, FiStar } from "react-icons/fi";
+import { FiArchive, FiEdit2, FiEye, FiEyeOff, FiRotateCcw, FiStar, FiTrash2 } from "react-icons/fi";
 import { formatGHS, priceRange, type AdminProductDTO } from "@aba-mart/shared";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ interface ProductTableProps {
   onToggleFeatured: (product: AdminProductDTO) => void;
   onArchive: (product: AdminProductDTO) => void;
   onRestore: (product: AdminProductDTO) => void;
+  onDelete: (product: AdminProductDTO) => void;
 }
 
 function StatusBadges({ product }: { product: AdminProductDTO }) {
@@ -46,19 +47,27 @@ function priceLabel(product: AdminProductDTO) {
   return range.min === range.max ? formatGHS(range.min) : `${formatGHS(range.min)} – ${formatGHS(range.max)}`;
 }
 
-export function ProductTable({ products, busyId, onToggleActive, onToggleFeatured, onArchive, onRestore }: ProductTableProps) {
+export function ProductTable({ products, busyId, onToggleActive, onToggleFeatured, onArchive, onRestore, onDelete }: ProductTableProps) {
   const actions = (product: AdminProductDTO) => {
-    const busy = busyId === product.id;
-    const iconButton = "inline-flex size-9 items-center justify-center rounded-lg text-muted hover:bg-brand-50 hover:text-brand disabled:opacity-40";
+    const busy = busyId !== null;
+    const iconButton = "inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-brand-50 hover:text-brand disabled:opacity-40";
+    const deleteButton = (
+      <button type="button" disabled={busy} onClick={() => onDelete(product)} aria-label={`Permanently delete ${product.name}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger-50 disabled:opacity-40">
+        <FiTrash2 className="size-4" aria-hidden="true" /> Delete
+      </button>
+    );
     if (product.isArchived) {
       return (
-        <button type="button" disabled={busy} onClick={() => onRestore(product)} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-brand hover:bg-brand-50">
+        <div className="flex w-full flex-wrap items-center justify-end gap-1 md:w-auto">
+        <button type="button" disabled={busy} onClick={() => onRestore(product)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-brand hover:bg-brand-50">
           <FiRotateCcw className="size-4" aria-hidden="true" /> Restore
         </button>
+        {deleteButton}
+        </div>
       );
     }
     return (
-      <div className="flex items-center justify-end gap-0.5">
+      <div className="flex w-full flex-wrap items-center justify-end gap-1 md:w-auto md:flex-nowrap">
         <Link href={`/admin/products/${product.id}/edit`} className={iconButton} aria-label={`Edit ${product.name}`} title="Edit">
           <FiEdit2 className="size-4" />
         </Link>
@@ -93,6 +102,7 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
         >
           <FiArchive className="size-4" />
         </button>
+        {deleteButton}
       </div>
     );
   };
@@ -121,7 +131,7 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <StatusBadges product={product} />
               {actions(product)}
             </div>

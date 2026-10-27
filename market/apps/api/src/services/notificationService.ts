@@ -20,6 +20,7 @@ import { Notification, type NotificationDoc } from "../models/Notification.js";
 import { NotificationReadState } from "../models/NotificationReadState.js";
 import { Order, type OrderDoc } from "../models/Order.js";
 import { Product } from "../models/Product.js";
+import { Counter } from "../models/Counter.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toISO } from "../utils/serialize.js";
 import { DEFAULT_PREFERENCES, hasActiveSubscription, isPushConfigured, schedulePushDeliveries, updateSubscriptionPreferences } from "./pushService.js";
@@ -50,11 +51,12 @@ async function readIds(recipientId: string, ids: Types.ObjectId[]): Promise<Set<
  * it is private to another visitor: order updates require their owning session.
  */
 export async function getCustomerFeed(guest: CustomerSessionDoc | null, all = false): Promise<NotificationFeedDTO> {
-  const [settings, latestProduct] = await Promise.all([
+  const [settings, latestProduct, deletions] = await Promise.all([
     getSettingsDoc(),
     Product.findOne().sort({ updatedAt: -1 }).select("updatedAt").lean<{ updatedAt: Date }>(),
+    Counter.findById("catalog-deletions").lean(),
   ]);
-  const catalogVersion = latestProduct ? toISO(latestProduct.updatedAt) : null;
+  const catalogVersion = `${latestProduct ? toISO(latestProduct.updatedAt) : "empty"}:${deletions?.seq ?? 0}`;
   const store = { ...DEFAULT_NOTIFICATION_SETTINGS, ...settings.notifications };
   const settingsVersion = toISO(settings.updatedAt);
   const available = { newProducts: store.newProducts, promotions: store.promotions };

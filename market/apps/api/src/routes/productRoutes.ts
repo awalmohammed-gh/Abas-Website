@@ -16,4 +16,5 @@ adminProductRouter.post("/", validateBody(productInputSchema), asyncHandler(prod
 adminProductRouter.get("/:id", validateIdParam, asyncHandler(products.adminGetProduct));
 adminProductRouter.patch("/:id", validateIdParam, asyncHandler(products.adminUpdateProduct));
 adminProductRouter.delete("/:id", validateIdParam, asyncHandler(products.adminArchiveProduct));
+adminProductRouter.delete("/:id/permanent", validateIdParam, asyncHandler(products.adminPermanentlyDeleteProduct));
 adminProductRouter.post("/:id/restore", validateIdParam, asyncHandler(products.adminRestoreProduct));

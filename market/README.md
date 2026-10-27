@@ -190,7 +190,7 @@ Landing-page motion uses [Motion](https://motion.dev) (`motion` 13.5.1), kept de
 
 `Admin`, `Category`, `Product` (with variants), `Order` (snapshots of name, variant and unit price at order time), `Banner`, `Settings` (single document), `Counter` (order reference sequence), `CustomerSession` (guest sessions, carts, notification preferences), `Notification`, `NotificationReadState`, `PushSubscription`.
 
-All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products have an optional **subcategory** (e.g. "Jeans", "Shower Gel"), shown on cards and included in search. Products are **archived** rather than deleted, so order history stays intact. A category can't be deleted while any product uses it; hide it instead.
+All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products have an optional **subcategory** (e.g. "Jeans", "Shower Gel"), shown on cards and included in search. **Archive** hides a product and allows restoration. **Delete** permanently removes its database record after confirmation; existing orders retain their recorded product names, prices, quantities, and images. Uploaded images are retained for those historical orders. Permanent deletion also invalidates storefront caches and updates open storefronts through the catalog revision. A category can't be deleted while any product uses it; hide it instead.
 
 ## Caching
 

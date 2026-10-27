@@ -44,6 +44,40 @@ describe("categories", () => {
 });
 
 describe("products", () => {
+  it("permanently deletes active and archived product records", async () => {
+    const category = await createCategory();
+    for (const archived of [false, true]) {
+      const product = (await admin.post("/api/admin/products", { name: archived ? "Archived Soap" : "Unwanted Soap", category: category.id, price: 1200, stock: 5 }).expect(201)).body.data;
+      if (archived) await admin.del(`/api/admin/products/${product.id}`).expect(200);
+      const deleted = await admin.del(`/api/admin/products/${product.id}/permanent`).expect(200);
+      expect(deleted.body.data).toEqual({ id: product.id, deleted: true });
+      expect(await Product.findById(product.id)).toBeNull();
+      await admin.get(`/api/admin/products/${product.id}`).expect(404);
+      await admin.post(`/api/admin/products/${product.id}/restore`).expect(404);
+      await request(app).get(`/api/products/${product.slug}`).expect(404);
+    }
+    const categories = await request(app).get("/api/categories").expect(200);
+    expect(categories.body.data.find((item: { id: string }) => item.id === category.id).productCount).toBe(0);
+  });
+
+  it("requires an authenticated admin and CSRF token for permanent deletion", async () => {
+    const category = await createCategory();
+    const product = (await admin.post("/api/admin/products", { name: "Protected Soap", category: category.id, price: 1200 }).expect(201)).body.data;
+    await request(app).delete(`/api/admin/products/${product.id}/permanent`).expect(401);
+    await request(app).delete(`/api/admin/products/${product.id}/permanent`).set("Cookie", admin.cookie).expect(403);
+    expect(await Product.findById(product.id)).not.toBeNull();
+  });
+
+  it("changes the storefront revision when an older product is permanently deleted", async () => {
+    const category = await createCategory();
+    const older = (await admin.post("/api/admin/products", { name: "Older Soap", category: category.id, price: 1200 }).expect(201)).body.data;
+    await admin.post("/api/admin/products", { name: "Newer Soap", category: category.id, price: 1400 }).expect(201);
+    const before = (await request(app).get("/api/notifications/public").expect(200)).body.data.catalogVersion;
+    await admin.del(`/api/admin/products/${older.id}/permanent`).expect(200);
+    const after = (await request(app).get("/api/notifications/public").expect(200)).body.data.catalogVersion;
+    expect(after).not.toBe(before);
+  });
+
   it("validates input on the server", async () => {
     const category = await createCategory();
     const res = await admin

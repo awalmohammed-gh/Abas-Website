@@ -14,6 +14,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { api, errorMessage } from "@/lib/api";
 import { buildQuery } from "@/lib/utils";
 import { confirm } from "@/components/ui/ConfirmDialog";
+import { broadcastStoreEvent } from "@/lib/storeChannel";
 
 type Status = "all" | "active" | "inactive" | "archived";
 type StockFilter = "all" | "in" | "low" | "out";
@@ -77,13 +78,36 @@ function ProductsContent() {
     }
   }
 
+  async function permanentlyDelete(product: AdminProductDTO) {
+    if (busyId) return;
+    if (!(await confirm({
+      title: `Permanently delete "${product.name}"?`,
+      description: "This removes the product from the database and storefront. It cannot be restored. Existing orders keep their recorded item details.",
+      confirmLabel: "Delete permanently",
+      cancelLabel: "Keep product",
+      tone: "danger",
+    }))) return;
+    setBusyId(product.id);
+    try {
+      await api.delete(`/admin/products/${product.id}/permanent`);
+      toast.success(`${product.name} permanently deleted`);
+      broadcastStoreEvent({ type: "notifications" });
+      if (products.data?.items.length === 1 && page > 1) setPage(page - 1);
+      else products.reload();
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const result = products.data;
 
   return (
     <>
       <PageHeader
         title="Products"
-        description="Add, edit, hide or archive products. Archived products stay in order history."
+        description="Add, edit, hide, archive or permanently delete products."
         actions={
           <ButtonLink href="/admin/products/new" leftIcon={<FiPlus className="size-4" aria-hidden="true" />}>
             Add product
@@ -174,11 +198,12 @@ function ProductsContent() {
           <div className={products.loading ? "opacity-60 transition-opacity" : undefined}>
             <ProductTable
               products={result.items}
-              busyId={busyId}
+              busyId={busyId ?? (products.loading ? "loading" : null)}
               onToggleActive={(p) => patch(p, { isActive: !p.isActive }, p.isActive ? `${p.name} is now hidden` : `${p.name} is now visible`)}
               onToggleFeatured={(p) => patch(p, { isFeatured: !p.isFeatured }, p.isFeatured ? `${p.name} removed from featured` : `${p.name} is featured`)}
               onArchive={archive}
               onRestore={restore}
+              onDelete={permanentlyDelete}
             />
             <SimplePagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
           </div>
