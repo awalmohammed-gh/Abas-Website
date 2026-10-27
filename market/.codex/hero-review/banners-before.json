@@ -1,0 +1,92 @@
+﻿[
+    {
+        "id":  "6ad20daf982c779da743ebda",
+        "eyebrow":  "Wear your personality",
+        "title":  "A little print. A lot of personality.",
+        "description":  "Express yourself with graphic tees in white, lilac and warm beige. Find a print that feels like you.",
+        "desktopImage":  {
+                             "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792150958/aba-mart/banners/te94jvf4urvhq7vu4xt7.jpg",
+                             "publicId":  "aba-mart/banners/te94jvf4urvhq7vu4xt7",
+                             "alt":  "White, lilac and beige graphic T-shirts hanging on a rail",
+                             "width":  735,
+                             "height":  490
+                         },
+        "mobileImage":  {
+                            "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792158145/aba-mart/banners/bhjpp4cxprmcxsmlyq6v.jpg",
+                            "publicId":  "aba-mart/banners/bhjpp4cxprmcxsmlyq6v",
+                            "width":  735,
+                            "height":  490
+                        },
+        "buttonText":  "Shop T-shirts",
+        "buttonLink":  "/categories/t-shirts-and-tops",
+        "displayOrder":  0,
+        "isActive":  true,
+        "createdAt":  "2026-10-16T11:42:39.287Z",
+        "updatedAt":  "2026-10-16T13:42:29.382Z"
+    },
+    {
+        "id":  "6ad20db1982c779da743ebdb",
+        "eyebrow":  "Everyday wardrobe essentials",
+        "title":  "Simple tees. Endless possibilities.",
+        "description":  "Keep it classic with plain T-shirts in white, grey and black. Easy to pair, easy to make your own.",
+        "desktopImage":  {
+                             "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792150960/aba-mart/banners/fncvmlkpgncferdrkhvo.jpg",
+                             "publicId":  "aba-mart/banners/fncvmlkpgncferdrkhvo",
+                             "alt":  "Plain white, grey and black T-shirts on a clothing rack",
+                             "width":  735,
+                             "height":  490
+                         },
+        "mobileImage":  {
+                            "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792158129/aba-mart/banners/orkulze5qxb5yt2vutuu.jpg",
+                            "publicId":  "aba-mart/banners/orkulze5qxb5yt2vutuu",
+                            "width":  735,
+                            "height":  490
+                        },
+        "buttonText":  "Explore everyday tees",
+        "buttonLink":  "/categories/t-shirts-and-tops",
+        "displayOrder":  1,
+        "isActive":  true,
+        "createdAt":  "2026-10-16T11:42:41.546Z",
+        "updatedAt":  "2026-10-16T13:42:15.293Z"
+    },
+    {
+        "id":  "6ad20db5982c779da743ebdc",
+        "eyebrow":  "Aba’s home essentials · GH₵20",
+        "title":  "A fresh clean, in a bigger bottle.",
+        "description":  "Aba’s multi-purpose liquid soap in the large handled bottle. A fresh addition to your everyday cleaning routine for GH₵20.",
+        "desktopImage":  {
+                             "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792150964/aba-mart/banners/c9e4oicgpoayy1znsbf5.png",
+                             "publicId":  "aba-mart/banners/c9e4oicgpoayy1znsbf5",
+                             "alt":  "Large yellow handled bottle of Aba’s multi-purpose liquid soap, advertised at GH₵20",
+                             "width":  1672,
+                             "height":  941
+                         },
+        "mobileImage":  null,
+        "buttonText":  "Shop liquid soap",
+        "buttonLink":  "/shop?q=liquid%20soap",
+        "displayOrder":  2,
+        "isActive":  true,
+        "createdAt":  "2026-10-16T11:42:45.734Z",
+        "updatedAt":  "2026-10-16T11:42:45.734Z"
+    },
+    {
+        "id":  "6ad20db9982c779da743ebdd",
+        "eyebrow":  "Aba’s home essentials · GH₵7",
+        "title":  "Everyday freshness. Just GH₵7.",
+        "description":  "Pick up the small bottle of Aba’s multi-purpose liquid soap. A handy choice for everyday cleaning at GH₵7.",
+        "desktopImage":  {
+                             "url":  "https://res.cloudinary.com/descmxvae/image/upload/v1792150968/aba-mart/banners/vhvxncprvohcwjer0tjd.png",
+                             "publicId":  "aba-mart/banners/vhvxncprvohcwjer0tjd",
+                             "alt":  "Small yellow bottle of Aba’s multi-purpose liquid soap, advertised at GH₵7",
+                             "width":  1672,
+                             "height":  941
+                         },
+        "mobileImage":  null,
+        "buttonText":  "Shop liquid soap",
+        "buttonLink":  "/shop?q=liquid%20soap",
+        "displayOrder":  3,
+        "isActive":  true,
+        "createdAt":  "2026-10-16T11:42:49.739Z",
+        "updatedAt":  "2026-10-16T11:42:49.739Z"
+    }
+]
