@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/Toast";
 import { siteConfig } from "@/config/site";
 import { getCategories, getMetadataSettings } from "@/lib/catalog";
 import { PwaManifestManager } from "@/components/layout/PwaManifestManager";
+import { PwaInstallProvider } from "@/components/layout/PwaInstallProvider";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -62,7 +63,6 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: settings.favicon?.url ?? "/favicon.ico",
       shortcut: "/favicon.ico",
-      apple: "/icons/store-192x192.png",
     },
     formatDetection: { telephone: false },
   };
@@ -72,18 +72,21 @@ export const viewport: Viewport = {
   themeColor: "#174C3C",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-GH" className={`${inter.variable} ${dmSans.variable} antialiased`}>
+    <html lang="en-GH" data-scroll-behavior="smooth" className={`${inter.variable} ${dmSans.variable} antialiased`}>
       <body className="flex min-h-dvh min-w-0 flex-col">
-        <Suspense fallback={null}>
-          <PwaManifestManager />
-        </Suspense>
-        {children}
-        <Toaster />
-        <ConfirmDialog />
+        <PwaInstallProvider>
+          <Suspense fallback={null}>
+            <PwaManifestManager />
+          </Suspense>
+          {children}
+          <Toaster />
+          <ConfirmDialog />
+        </PwaInstallProvider>
       </body>
     </html>
   );

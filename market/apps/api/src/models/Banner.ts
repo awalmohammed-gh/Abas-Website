@@ -21,7 +21,7 @@ const bannerSchema = new Schema<BannerDoc>(
   {
     eyebrow: { type: String, default: "", trim: true, maxlength: 60 },
     title: { type: String, required: true, trim: true, maxlength: 90 },
-    description: { type: String, default: "", trim: true, maxlength: 220 },
+    description: { type: String, default: "", trim: true, maxlength: 350 },
     desktopImage: { type: imageAssetSchema, required: true },
     mobileImage: { type: imageAssetSchema, default: null },
     buttonText: { type: String, default: "", trim: true, maxlength: 30 },

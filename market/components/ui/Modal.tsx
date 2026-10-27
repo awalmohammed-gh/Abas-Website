@@ -49,7 +49,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         if (event.target === ref.current && !locked) onClose();
       }}
       className={cn(
-        "m-0 mt-auto max-h-dvh w-full max-w-none overflow-y-auto overscroll-contain bg-transparent p-0 backdrop:bg-brand-deep/45 backdrop:backdrop-blur-[2px]",
+        "z-50 m-0 mt-auto max-h-dvh w-full max-w-none overflow-y-auto overscroll-contain bg-transparent p-0 backdrop:bg-brand-deep/45 backdrop:backdrop-blur-[2px]",
         "sm:m-auto sm:w-[calc(100%_-_2rem)]",
         widths[size],
       )}

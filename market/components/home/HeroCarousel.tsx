@@ -4,14 +4,14 @@ import { getImageProps } from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useAnimate } from "motion/react-mini";
-import { FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiArrowRight, FiCheckCircle, FiChevronLeft, FiChevronRight, FiShoppingBag } from "react-icons/fi";
 import type { BannerDTO } from "@aba-mart/shared";
 import { usePrefersReducedMotion } from "@/components/animations/usePrefersReducedMotion";
 import { EASE_OUT } from "@/components/animations/tokens";
 import { buttonClasses } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
-const INTERVAL = 6500;
+const INTERVAL = 8000;
 const SLIDE_DURATION = 0.9;
 
 export type HeroBanner = Pick<BannerDTO, "id" | "eyebrow" | "title" | "description" | "desktopImage" | "mobileImage" | "buttonText" | "buttonLink">;
@@ -22,18 +22,18 @@ function BannerPicture({ banner, priority, className }: { banner: HeroBanner; pr
     alt: banner.desktopImage.alt || banner.title,
     loading: priority ? "eager" : "lazy",
     fetchPriority: priority ? "high" : "auto",
-    sizes: "(min-width: 768px) 75vw, 100vw",
+    sizes: "100vw",
     quality: 75,
   } as const;
   const desktop = getImageProps({ ...common, src: banner.desktopImage.url, width: banner.desktopImage.width ?? 1920, height: banner.desktopImage.height ?? 720 }).props;
   const mobileImage = banner.mobileImage ?? banner.desktopImage;
   const mobile = getImageProps({ ...common, src: mobileImage.url, width: mobileImage.width ?? 1080, height: mobileImage.height ?? 1080, alt: mobileImage.alt || common.alt }).props;
   return (
-    <picture>
+    <picture className="absolute inset-0 block h-full w-full">
       <source media="(min-width: 768px)" srcSet={desktop.srcSet} />
       <source media="(max-width: 767px)" srcSet={mobile.srcSet} />
       {/* eslint-disable-next-line jsx-a11y/alt-text -- alt comes from getImageProps */}
-      <img {...mobile} data-hero-image className={cn("absolute right-0 top-0 h-auto w-full object-cover md:h-full md:w-3/4", className)} />
+      <img {...mobile} data-hero-image className={cn("absolute inset-0 h-full w-full object-cover", className)} />
     </picture>
   );
 }
@@ -57,7 +57,6 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
   const [{ index, seen, direction, transitioning }, setState] = useState({ index: 0, seen: [0], direction: 1, transitioning: false });
   const previousIndex = useRef(0);
   const [scope, animate] = useAnimate<HTMLDivElement>();
-  const [paused, setPaused] = useState(false);
   const reduceMotion = usePrefersReducedMotion();
   const pageLoaded = useSyncExternalStore(subscribeLoad, () => document.readyState === "complete", () => false);
   const pageVisible = useSyncExternalStore(subscribeVisibility, () => !document.hidden, () => true);
@@ -129,10 +128,10 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
     };
   }, [index, direction, reduceMotion, scope, animate]);
 
-  // One timer per slide: restarts after manual navigation, stops while hovered,
-  // focused or in a background tab, and never runs for reduced-motion users.
+  // Automatically advance every eight seconds, including after hover or touch.
+  // Background tabs and reduced-motion preferences still suspend rotation.
   useEffect(() => {
-    if (count < 2 || paused || reduceMotion || !pageVisible) return;
+    if (count < 2 || reduceMotion || !pageVisible) return;
     const timer = window.setTimeout(() => {
       setState((s) => {
         const i = (s.index + 1) % count;
@@ -140,7 +139,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
       });
     }, INTERVAL);
     return () => window.clearTimeout(timer);
-  }, [index, count, paused, reduceMotion, pageVisible]);
+  }, [index, count, reduceMotion, pageVisible]);
 
   // After the page has finished loading, fetch the next slide's image in the background.
   const nextIndex = (index + 1) % count;
@@ -150,14 +149,10 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
     <section
       aria-roledescription="carousel"
       aria-label="Featured promotions"
-      className="relative overflow-hidden bg-brand-deep"
-      onPointerEnter={(event) => { if (event.pointerType === "mouse") setPaused(true); }}
-      onPointerLeave={(event) => { if (event.pointerType === "mouse") setPaused(false); }}
-      onFocus={() => setPaused(true)}
-      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPaused(false); }}
+      className="relative h-[100vh] overflow-hidden bg-brand-deep"
     >
       {/* Reserve space for the photo and readable overlay at every screen size. */}
-      <div ref={scope} className="relative grid min-h-[640px] sm:min-h-[760px] md:min-h-[clamp(440px,40vw,620px)]">
+      <div ref={scope} className="relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)]">
         {banners.map((banner, i) => {
           const active = i === index;
           return (
@@ -169,7 +164,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               aria-label={`${i + 1} of ${count}`}
               aria-hidden={!active}
               inert={!active}
-              className={cn("relative col-start-1 row-start-1 min-w-0 overflow-hidden", active ? "z-10 opacity-100" : "pointer-events-none opacity-0")}
+              className={cn("relative col-start-1 row-start-1 h-full min-h-0 min-w-0 overflow-hidden", active ? "z-10 opacity-100" : "pointer-events-none opacity-0")}
             >
               {hasImage(i) && (
                 <BannerPicture
@@ -177,36 +172,58 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
                   priority={i === 0}
                 />
               )}
-              <div className="absolute inset-0 bg-[linear-gradient(to_top,#10382d_0%,#10382d_40%,transparent_72%)] md:bg-[linear-gradient(to_right,#10382d_0%,#10382d_25%,rgba(16,56,45,0.94)_33%,rgba(16,56,45,0.35)_53%,transparent_72%)]" aria-hidden="true" />
-              <div className="container-page relative flex h-full min-h-[640px] items-end pb-20 pt-[60vw] sm:min-h-[760px] md:min-h-[clamp(440px,40vw,620px)] md:items-center md:pb-20 md:pt-10">
-                <div className="min-w-0 max-w-lg text-cream md:max-w-[44%] lg:max-w-[40%]">
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(16,56,45,0.4)_0%,rgba(16,56,45,0.8)_50%,rgba(16,56,45,0.65)_100%)]" aria-hidden="true" />
+              <div className="container-page absolute inset-0 overflow-y-auto">
+                <div className="flex min-h-full items-center justify-center py-24">
+                <div className="w-full min-w-0 max-w-3xl text-center text-cream">
                   {banner.eyebrow && (
-                    <p style={rise(active, 0).style} className={cn("mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-accent sm:text-sm", rise(active, 0).className)}>
+                    <p style={rise(active, 0).style} className={cn("mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream backdrop-blur-sm sm:text-xs", rise(active, 0).className)}>
+                      <FiShoppingBag className="size-3.5 text-accent" aria-hidden="true" />
                       {banner.eyebrow}
                     </p>
                   )}
                   {i === 0 ? (
-                    <h1 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.08] sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl", rise(active, 60).className)}>
+                    <h1 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl", rise(active, 60).className)}>
                       {banner.title}
                     </h1>
                   ) : (
-                    <h2 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.08] sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl", rise(active, 60).className)}>
+                    <h2 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl", rise(active, 60).className)}>
                       {banner.title}
                     </h2>
                   )}
                   {banner.description && (
-                    <p style={rise(active, 140).style} className={cn("mt-4 max-w-md text-base leading-relaxed text-cream/85 sm:text-lg", rise(active, 140).className)}>
-                      {banner.description}
+                    <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-pretty text-cream/85 sm:text-base lg:text-lg">
+                      <span className="sr-only">{banner.description}</span>
+                      <span aria-hidden="true">
+                        {banner.description.trim().split(/\s+/).map((word, wordIndex) => (
+                          <span key={wordIndex}>
+                            <span
+                              className={cn("inline-block", active && "motion-safe:animate-hero-word")}
+                              style={active ? { animationDelay: `${240 + Math.min(wordIndex * 22, 1400)}ms` } : undefined}
+                            >
+                              {word}
+                            </span>{" "}
+                          </span>
+                        ))}
+                      </span>
                     </p>
                   )}
                   {banner.buttonText && banner.buttonLink && (
-                    <div style={rise(active, 220).style} className={rise(active, 220).className}>
-                      <Link href={banner.buttonLink} tabIndex={active ? 0 : -1} className={buttonClasses("accent", "lg", "group mt-6")}>
+                    <div style={rise(active, 220).style} className={cn("mt-7 flex flex-wrap items-center justify-center gap-3", rise(active, 220).className)}>
+                      <Link href={banner.buttonLink} tabIndex={active ? 0 : -1} className={buttonClasses("accent", "lg", "group min-w-44 shadow-lg")}>
                         {banner.buttonText}
                         <FiArrowRight className="size-5 transition-transform duration-200 ease-out-soft group-hover:translate-x-0.5" aria-hidden="true" />
                       </Link>
+                      <Link href="/products" tabIndex={active ? 0 : -1} className={buttonClasses("ghost", "lg", "border border-white/35 bg-white/5 text-cream backdrop-blur-sm hover:bg-white/15 hover:text-white")}>
+                        Explore all products
+                      </Link>
                     </div>
                   )}
+                  <div style={rise(active, 300).style} className={cn("mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-cream/75 sm:text-sm", rise(active, 300).className)}>
+                    <span className="inline-flex items-center gap-1.5"><FiCheckCircle className="size-4 text-accent" aria-hidden="true" /> Order on WhatsApp</span>
+                    <span className="inline-flex items-center gap-1.5"><FiCheckCircle className="size-4 text-accent" aria-hidden="true" /> No account needed</span>
+                  </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -215,12 +232,20 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
       </div>
 
       {count > 1 && (
-        <>
+        <div className="absolute inset-x-0 bottom-0 z-20 flex min-h-16 items-center gap-2 border-t border-white/15 bg-brand-deep/40 px-5 backdrop-blur-sm sm:px-8">
+          <div className="mr-auto flex min-w-0 items-center overflow-x-auto">
+            {banners.map((banner, i) => (
+              <button key={banner.id} type="button" onClick={() => show(i)} disabled={transitioning && !reduceMotion} aria-label={`Show slide ${i + 1}: ${banner.title}`} aria-current={i === index} className="group flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent">
+                <span className={cn("h-1.5 rounded-full transition-all duration-300", i === index ? "w-7 bg-accent" : "w-1.5 bg-white/50 group-hover:bg-white")} />
+              </button>
+            ))}
+          </div>
+          <span className="mr-1 shrink-0 text-xs tabular-nums text-cream/70" aria-hidden="true">{String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}</span>
           <button
             type="button"
             onClick={() => show(index - 1, -1)}
             disabled={transitioning && !reduceMotion}
-            className="absolute bottom-4 right-16 z-20 flex size-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors duration-200 hover:bg-white/30 disabled:cursor-default"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-cream transition-colors hover:bg-white/15 disabled:cursor-default"
             aria-label="Previous slide"
           >
             <FiChevronLeft className="size-6" />
@@ -229,33 +254,12 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
             type="button"
             onClick={() => show(index + 1, 1)}
             disabled={transitioning && !reduceMotion}
-            className="absolute bottom-4 right-3 z-20 flex size-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors duration-200 hover:bg-white/30 disabled:cursor-default"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-cream transition-colors hover:bg-white/15 disabled:cursor-default"
             aria-label="Next slide"
           >
             <FiChevronRight className="size-6" />
           </button>
-          <div className="absolute bottom-4 left-3 right-32 z-20 flex h-11 items-center overflow-x-auto">
-            {banners.map((banner, i) => (
-              <button
-                key={banner.id}
-                type="button"
-                onClick={() => show(i)}
-                disabled={transitioning && !reduceMotion}
-                aria-label={`Show slide ${i + 1}`}
-                aria-current={i === index}
-                className="group flex size-8 shrink-0 items-center justify-center"
-              >
-                {/* Fixed-size pill scaled with transform, so the indicator never changes layout. */}
-                <span
-                  className={cn(
-                    "h-2 w-7 rounded-full transition-[scale,background-color] duration-300 ease-out-soft",
-                    i === index ? "scale-x-100 bg-accent" : "scale-x-[0.286] bg-white/60 group-hover:bg-white",
-                  )}
-                />
-              </button>
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </section>
   );

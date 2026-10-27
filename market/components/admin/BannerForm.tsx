@@ -111,7 +111,7 @@ export function BannerForm({
             onChange={(img) => set("desktopImage", img)}
             folder="banners"
             aspect="aspect-[8/3]"
-            hint="1920 × 720 px (8:3). Keep important content left of centre."
+            hint="Use a high-resolution landscape image. It fills a full-height banner with text over the left side; keep the main subject near the centre or right."
             error={errors.desktopImage}
           />
           <SingleImageUploader
@@ -120,13 +120,19 @@ export function BannerForm({
             onChange={(img) => set("mobileImage", img)}
             folder="banners"
             aspect="aspect-square"
-            hint="1080 × 1080 px (1:1). Optional — the desktop image is cropped if empty."
+            hint="Optional portrait crop for the full-height mobile banner. Text overlays the lower part of the image."
             error={errors.mobileImage}
           />
         </div>
         <Input label="Small heading" value={state.eyebrow} onChange={(e) => set("eyebrow", e.target.value)} error={errors.eyebrow} maxLength={60} hint="Optional line above the heading, e.g. a tagline or price" />
         <Input label="Heading" required value={state.title} onChange={(e) => set("title", e.target.value)} error={errors.title} maxLength={90} />
-        <Textarea label="Description" rows={2} value={state.description} onChange={(e) => set("description", e.target.value)} error={errors.description} maxLength={220} />
+        <Textarea label="Description" rows={4} value={state.description} onChange={(e) => set("description", e.target.value)} error={errors.description} maxLength={350} hint={`Describe the pictured products and their details. Only include facts you can verify. ${state.description.length}/350 characters.`} />
+        {state.desktopImage && (
+          <Input label="Desktop image description (alt text)" value={state.desktopImage.alt ?? ""} onChange={(e) => set("desktopImage", { ...state.desktopImage!, alt: e.target.value })} maxLength={160} hint="Describe what is visible for shoppers using a screen reader, rather than repeating the headline." />
+        )}
+        {state.mobileImage && (
+          <Input label="Mobile image description (alt text)" value={state.mobileImage.alt ?? ""} onChange={(e) => set("mobileImage", { ...state.mobileImage!, alt: e.target.value })} maxLength={160} hint="Describe the mobile photo. Leave empty to use the desktop image description." />
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Button text" value={state.buttonText} onChange={(e) => set("buttonText", e.target.value)} error={errors.buttonText} maxLength={30} />
           <Input

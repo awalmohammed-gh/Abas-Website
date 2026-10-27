@@ -5,23 +5,18 @@
  * Notification.requestPermission() is only called from an explicit click.
  */
 
+import { isIosDevice, isStandalone } from "./pwa";
+
 export type PushSupport = "supported" | "unsupported" | "needs-install" | "insecure";
-
-function isAppleMobile(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-function isStandalone(): boolean {
-  return window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-}
 
 export function getPushSupport(): PushSupport {
   if (typeof window === "undefined") return "unsupported";
   if (!window.isSecureContext) return "insecure";
+  if (isIosDevice() && !isStandalone()) return "needs-install";
   const apis = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   if (apis) return "supported";
   // iPhone and iPad only offer Web Push to web apps added to the Home Screen.
-  return isAppleMobile() && !isStandalone() ? "needs-install" : "unsupported";
+  return "unsupported";
 }
 
 export function getPermission(): NotificationPermission | "unsupported" {

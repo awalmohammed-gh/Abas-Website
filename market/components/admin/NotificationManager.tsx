@@ -110,9 +110,9 @@ function NotificationRow({ n, onChanged, checked, onSelect, selectionBusy, canMa
           {n.createdBy && <span>by {n.createdBy.name}</span>}
           {n.expiresAt && <span>{state.label === "Ended" ? "Ended" : "Ends"} {formatDateTime(n.expiresAt)}</span>}
           {n.targetUrl && !isSystem && (
-            <a href={n.targetUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline">
+            <Link href={n.targetUrl} className="inline-flex items-center gap-1 text-brand hover:underline">
               {n.targetUrl} <FiExternalLink className="size-3" aria-hidden="true" />
-            </a>
+            </Link>
           )}
         </p>
         <PushReport n={n} />

@@ -9,5 +9,5 @@ export async function Hero() {
 }
 
 export function HeroSkeleton() {
-  return <div className="skeleton h-[640px] w-full rounded-none sm:h-[760px] md:h-[clamp(440px,40vw,620px)]" aria-hidden="true" />;
+  return <div className="skeleton h-[100vh] w-full rounded-none" aria-hidden="true" />;
 }

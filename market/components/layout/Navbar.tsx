@@ -228,10 +228,10 @@ export function Navbar({ storeName, logo, whatsappNumber, supportMessage, suppor
             )}
           </Link>
 
-          {/* Phones and tablets: the menu sits at the far right, so the logo stands alone on the left. */}
+          {/* Tablets use the menu between the mobile dock and desktop navigation breakpoints. */}
           <button
             type="button"
-            className="-mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
+            className="-mr-2 hidden size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 md:inline-flex lg:hidden"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
             aria-expanded={menuOpen}

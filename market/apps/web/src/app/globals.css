@@ -33,6 +33,18 @@
   --animate-toast-out: toast-out 180ms ease-in forwards;
   /* Hero copy entrance: CSS only, so it plays before (and without) JavaScript. */
   --animate-hero-rise: hero-rise 600ms var(--ease-out-soft) both;
+  --animate-hero-word: hero-word 700ms var(--ease-out-soft) both;
+
+  @keyframes hero-word {
+    from {
+      opacity: 0;
+      translate: 0 14px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
 
   /* Shared easing for storefront motion (matches EASE_OUT in components/animations/tokens.ts). */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);

@@ -38,11 +38,11 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
 
   useEffect(() => {
     if (!open) return;
-    const desktop = window.matchMedia("(min-width: 1024px)");
-    const closeOnDesktop = () => { if (desktop.matches) onClose(); };
-    closeOnDesktop();
-    desktop.addEventListener("change", closeOnDesktop);
-    return () => desktop.removeEventListener("change", closeOnDesktop);
+    const tablet = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
+    const closeOutsideTablet = () => { if (!tablet.matches) onClose(); };
+    closeOutsideTablet();
+    tablet.addEventListener("change", closeOutsideTablet);
+    return () => tablet.removeEventListener("change", closeOutsideTablet);
   }, [open, onClose]);
 
   const linkClass = (active: boolean) =>
@@ -58,7 +58,7 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
       id="mobile-menu"
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onClick={(event) => { if (event.target === dialogRef.current) onClose(); }}
-      className="mobile-menu fixed inset-x-0 top-0 bottom-auto m-0 h-fit max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
+      className="mobile-menu fixed inset-x-0 top-0 bottom-auto z-50 m-0 h-fit max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
     >
       <div className="flex max-h-dvh min-w-0 flex-col rounded-b-2xl bg-white shadow-pop">
         <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">

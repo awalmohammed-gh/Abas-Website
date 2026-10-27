@@ -147,9 +147,6 @@ export async function Footer() {
           </p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <p>Prices are in Ghana Cedis (GHS). Orders are confirmed with you on WhatsApp.</p>
-            <a href="/admin" className="text-cream/40 transition-colors hover:text-accent hover:underline">
-              Staff Portal
-            </a>
           </div>
         </div>
       </div>

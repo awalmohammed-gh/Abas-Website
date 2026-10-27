@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { AdminSession, AdminUserDTO } from "@aba-mart/shared";
 import { BrandMark } from "@/components/brand/Logo";
@@ -106,7 +107,7 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
           ) : (
             <Spinner label="Checking your session" />
           )}
-          <a href={loginHref} className={buttonClasses("secondary")}>Go to admin sign in</a>
+          <Link href={loginHref} className={buttonClasses("secondary")}>Go to admin sign in</Link>
         </div>
       </div>
     );
