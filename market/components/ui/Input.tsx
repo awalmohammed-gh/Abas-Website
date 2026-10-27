@@ -49,9 +49,10 @@ type InputProps = Omit<ComponentProps<"input">, "children"> & {
   error?: string;
   wrapperClassName?: string;
   leading?: ReactNode;
+  trailing?: ReactNode;
 };
 
-export function Input({ label, hint, error, required, wrapperClassName, className, leading, ...props }: InputProps) {
+export function Input({ label, hint, error, required, wrapperClassName, className, leading, trailing, ...props }: InputProps) {
   return (
     <Field label={label} hint={hint} error={error} required={required} className={wrapperClassName}>
       {({ id, describedBy, invalid }) => (
@@ -62,9 +63,10 @@ export function Input({ label, hint, error, required, wrapperClassName, classNam
             aria-describedby={describedBy}
             aria-invalid={invalid || undefined}
             required={required}
-            className={cn(fieldBase, "h-11", invalid ? "border-danger" : "border-line", leading ? "pl-12" : undefined, className)}
+            className={cn(fieldBase, "h-11", invalid ? "border-danger" : "border-line", leading ? "pl-12" : undefined, trailing ? "pr-12" : undefined, className)}
             {...props}
           />
+          {trailing && <span className="absolute inset-y-0 right-0 flex items-center">{trailing}</span>}
         </div>
       )}
     </Field>

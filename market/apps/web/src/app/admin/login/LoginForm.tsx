@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import { adminLoginSchema, flattenIssues, type AdminSession } from "@aba-mart/shared";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -17,6 +18,7 @@ export function LoginForm() {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(
     params.get("reason") === "expired" ? "Your session has ended. Please sign in again." : null,
@@ -32,6 +34,7 @@ export function LoginForm() {
       return;
     }
     setErrors({});
+    setShowPassword(false);
     setSubmitting(true);
     try {
       const session = await api.post<AdminSession>("/admin/auth/login", parsed.data);
@@ -63,13 +66,25 @@ export function LoginForm() {
       />
       <Input
         label="Password"
-        type="password"
+        type={showPassword ? "text" : "password"}
         autoComplete="current-password"
         required
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         error={errors.password}
         maxLength={200}
+        trailing={
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            disabled={submitting}
+            className="flex size-11 items-center justify-center rounded-r-xl text-muted transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand disabled:opacity-50"
+          >
+            {showPassword ? <FiEyeOff className="size-5" aria-hidden="true" /> : <FiEye className="size-5" aria-hidden="true" />}
+          </button>
+        }
       />
       <Button type="submit" size="lg" className="w-full" loading={submitting}>
         Sign in
