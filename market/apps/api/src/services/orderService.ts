@@ -483,7 +483,7 @@ export async function updateOrderStatus(
     return order.toObject();
   });
 
-  if (stockTouched) revalidateStorefront("products");
+  if (stockTouched) await revalidateStorefront("products");
   if (changed) schedulePushDeliveries();
   return { order: toOrderDTO(result as OrderDoc), changed };
 }

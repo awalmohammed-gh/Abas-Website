@@ -27,16 +27,16 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
   const label = product.subCategory || product.category?.name;
 
   return (
-    <article className="group relative flex h-full min-w-0 flex-col">
+    <article className={cn("group relative flex h-full min-w-0 flex-col", soldOut && "cursor-not-allowed")}>
       <div className="relative aspect-4/5 overflow-hidden rounded-2xl bg-cream-200">
         <ProductImage
           src={image?.url}
           alt={image?.alt || product.name}
           sizes={SIZES}
           priority={priority}
-          className={cn("transition-[scale,opacity] duration-700 ease-out-soft group-hover:scale-[1.04]", soldOut && "opacity-60 grayscale-35", hoverImage && "group-hover:opacity-0")}
+          className={cn(soldOut ? "opacity-45 grayscale" : "transition-[scale,opacity] duration-700 ease-out-soft group-hover:scale-[1.04]", !soldOut && hoverImage && "group-hover:opacity-0")}
         />
-        {hoverImage && (
+        {hoverImage && !soldOut && (
           <ProductImage
             src={hoverImage.url}
             alt=""
@@ -46,8 +46,8 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
         )}
 
         <div className="pointer-events-none absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
-          {discount && <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold leading-none text-brand-deep shadow-sm">-{discount}%</span>}
-          {soldOut && <span className="rounded-full bg-ink/85 px-2.5 py-1 text-[11px] font-semibold leading-none text-white">Sold out</span>}
+          {discount && !soldOut && <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-bold leading-none text-brand-deep shadow-sm">-{discount}%</span>}
+          {soldOut && <span className="rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold leading-none text-white">Out of stock</span>}
         </div>
 
         {!soldOut && (
@@ -87,12 +87,12 @@ export function ProductCard({ product, priority = false }: { product: ProductDTO
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 px-0.5 pt-3">
+      <div className={cn("flex flex-1 flex-col gap-1 px-0.5 pt-3", soldOut && "opacity-60")}>
         {label && <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{label}</p>}
         <h3 className="line-clamp-2 text-sm font-medium leading-snug text-ink sm:text-[15px]">
-          <Link href={href} className="transition-colors duration-200 before:absolute before:inset-0 before:rounded-2xl group-hover:text-brand focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-offset-4 focus-visible:before:outline-brand">
+          {soldOut ? <span>{product.name}</span> : <Link href={href} className="transition-colors duration-200 before:absolute before:inset-0 before:rounded-2xl group-hover:text-brand focus-visible:outline-none focus-visible:before:outline-2 focus-visible:before:outline-offset-4 focus-visible:before:outline-brand">
             {product.name}
-          </Link>
+          </Link>}
         </h3>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1">
           <PriceTag price={range.min} maxPrice={range.max} compareAtPrice={compareAtPrice} />

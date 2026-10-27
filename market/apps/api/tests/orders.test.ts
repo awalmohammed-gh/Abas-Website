@@ -201,6 +201,23 @@ describe("order status and inventory", () => {
     ]);
   });
 
+  it("keeps sold-out products visible, rejects further purchases and refreshes stock revisions", async () => {
+    const before = await guest.get("/api/notifications/public").expect(200);
+    const order = await pendingOrder([{ productId: gel.id, quantity: 5 }]);
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Confirmed" }).expect(200);
+
+    const products = await request(app).get("/api/products").expect(200);
+    const soldOut = products.body.data.items.find((product: { id: string }) => product.id === gel.id);
+    expect(soldOut).toMatchObject({ stock: 0, inStock: false });
+    const after = await guest.get("/api/notifications/public").expect(200);
+    expect(after.body.data.catalogVersion).not.toBe(before.body.data.catalogVersion);
+    await placeOrder([{ productId: gel.id, quantity: 1 }]).expect(409);
+
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Cancelled" }).expect(200);
+    const restored = await request(app).get("/api/products").expect(200);
+    expect(restored.body.data.items.find((product: { id: string }) => product.id === gel.id)).toMatchObject({ stock: 5, inStock: true });
+  });
+
   it("rejects invalid status transitions", async () => {
     const order = await pendingOrder([{ productId: gel.id, quantity: 1 }]);
     const res = await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Completed" }).expect(409);

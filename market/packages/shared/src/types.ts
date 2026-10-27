@@ -213,6 +213,8 @@ export interface NotificationFeedDTO {
   available: NotificationPreferences;
   /** Changes whenever store settings change, so open tabs can refresh. */
   settingsVersion: string | null;
+  /** Product/stock revision for refreshing open storefront pages. Optional for older APIs. */
+  catalogVersion?: string | null;
   /** Seconds a visitor browses before the push opt-in invitation may appear. */
   promptDelaySeconds: number;
 }

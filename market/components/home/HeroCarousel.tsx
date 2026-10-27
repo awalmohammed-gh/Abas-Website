@@ -210,11 +210,11 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
                   )}
                   {banner.buttonText && banner.buttonLink && (
                     <div style={rise(active, 220).style} className={cn("mt-7 flex flex-wrap items-center justify-center gap-3", rise(active, 220).className)}>
-                      <Link href={banner.buttonLink} tabIndex={active ? 0 : -1} className={buttonClasses("accent", "lg", "group min-w-44 shadow-lg")}>
+                      <Link href={banner.buttonLink} tabIndex={active ? 0 : -1} className={buttonClasses("hero", "lg", "group min-w-44 shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white")}>
                         {banner.buttonText}
                         <FiArrowRight className="size-5 transition-transform duration-200 ease-out-soft group-hover:translate-x-0.5" aria-hidden="true" />
                       </Link>
-                      <Link href="/products" tabIndex={active ? 0 : -1} className={buttonClasses("ghost", "lg", "border border-white/35 bg-white/5 text-cream backdrop-blur-sm hover:bg-white/15 hover:text-white")}>
+                      <Link href="/products" tabIndex={active ? 0 : -1} className={buttonClasses("secondary", "lg", "min-w-44 shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white")}>
                         Explore all products
                       </Link>
                     </div>
@@ -245,7 +245,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
             type="button"
             onClick={() => show(index - 1, -1)}
             disabled={transitioning && !reduceMotion}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-cream transition-colors hover:bg-white/15 disabled:cursor-default"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white text-brand shadow-sm transition-colors hover:bg-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-default"
             aria-label="Previous slide"
           >
             <FiChevronLeft className="size-6" />
@@ -254,7 +254,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
             type="button"
             onClick={() => show(index + 1, 1)}
             disabled={transitioning && !reduceMotion}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-cream transition-colors hover:bg-white/15 disabled:cursor-default"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white text-brand shadow-sm transition-colors hover:bg-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-default"
             aria-label="Next slide"
           >
             <FiChevronRight className="size-6" />

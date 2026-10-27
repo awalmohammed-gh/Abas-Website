@@ -143,7 +143,8 @@ export function ProductDetails({ product, whatsappEnabled, whatsappNotice }: { p
                         key={value}
                         type="button"
                         aria-pressed={selected}
-                        disabled={!exists}
+                        disabled={!exists || !available}
+                        aria-label={!available ? `${value}: out of stock` : value}
                         onClick={() => {
                           setSelection((s) => ({ ...s, [option.name]: selected ? undefined : value }));
                           setQuantity(1);
@@ -152,7 +153,7 @@ export function ProductDetails({ product, whatsappEnabled, whatsappNotice }: { p
                           "min-h-11 min-w-12 rounded-xl border px-4 text-sm font-medium transition-colors",
                           selected ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand",
                           !available && !selected && "text-muted line-through decoration-muted/70",
-                          !exists && "cursor-not-allowed opacity-40",
+                          (!exists || !available) && "cursor-not-allowed opacity-40",
                         )}
                       >
                         {value}

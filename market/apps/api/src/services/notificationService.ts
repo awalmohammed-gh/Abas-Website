@@ -19,6 +19,7 @@ import { CustomerSession, type CustomerSessionDoc } from "../models/CustomerSess
 import { Notification, type NotificationDoc } from "../models/Notification.js";
 import { NotificationReadState } from "../models/NotificationReadState.js";
 import { Order, type OrderDoc } from "../models/Order.js";
+import { Product } from "../models/Product.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toISO } from "../utils/serialize.js";
 import { DEFAULT_PREFERENCES, hasActiveSubscription, isPushConfigured, schedulePushDeliveries, updateSubscriptionPreferences } from "./pushService.js";
@@ -49,7 +50,11 @@ async function readIds(recipientId: string, ids: Types.ObjectId[]): Promise<Set<
  * it is private to another visitor: order updates require their owning session.
  */
 export async function getCustomerFeed(guest: CustomerSessionDoc | null, all = false): Promise<NotificationFeedDTO> {
-  const settings = await getSettingsDoc();
+  const [settings, latestProduct] = await Promise.all([
+    getSettingsDoc(),
+    Product.findOne().sort({ updatedAt: -1 }).select("updatedAt").lean<{ updatedAt: Date }>(),
+  ]);
+  const catalogVersion = latestProduct ? toISO(latestProduct.updatedAt) : null;
   const store = { ...DEFAULT_NOTIFICATION_SETTINGS, ...settings.notifications };
   const settingsVersion = toISO(settings.updatedAt);
   const available = { newProducts: store.newProducts, promotions: store.promotions };
@@ -57,7 +62,7 @@ export async function getCustomerFeed(guest: CustomerSessionDoc | null, all = fa
   const promptDelaySeconds = store.promptDelaySeconds;
 
   if (!store.enabled) {
-    return { enabled: false, items: [], unreadCount: 0, preferences, available, settingsVersion, promptDelaySeconds };
+    return { enabled: false, items: [], unreadCount: 0, preferences, available, settingsVersion, catalogVersion, promptDelaySeconds };
   }
 
   const prefs = preferences ?? DEFAULT_PREFERENCES;
@@ -97,7 +102,7 @@ export async function getCustomerFeed(guest: CustomerSessionDoc | null, all = fa
     publishedAt: toISO(doc.publishedAt)!,
     read: read.has(doc._id.toString()),
   }));
-  return { enabled: true, items, unreadCount: items.filter((i) => !i.read).length, preferences, available, settingsVersion, promptDelaySeconds };
+  return { enabled: true, items, unreadCount: items.filter((i) => !i.read).length, preferences, available, settingsVersion, catalogVersion, promptDelaySeconds };
 }
 
 async function markRead(recipientId: string, ids: Types.ObjectId[]): Promise<number> {

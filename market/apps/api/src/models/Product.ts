@@ -100,6 +100,7 @@ productSchema.pre("validate", function syncVariantStock() {
 });
 
 productSchema.index({ slug: 1 }, { unique: true });
+productSchema.index({ updatedAt: -1 });
 productSchema.index({ isArchived: 1, isActive: 1, category: 1, createdAt: -1 });
 productSchema.index({ isArchived: 1, isActive: 1, isFeatured: 1, createdAt: -1 });
 productSchema.index({ isArchived: 1, isActive: 1, price: 1 });

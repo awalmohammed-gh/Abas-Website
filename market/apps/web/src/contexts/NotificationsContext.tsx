@@ -67,6 +67,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     error: null,
   });
   const settingsVersion = useRef<string | null | undefined>(undefined);
+  const catalogVersion = useRef<string | null | undefined>(undefined);
+  const catalogRecheck = useRef(false);
   const visit = useRef(0);
   const loadSequence = useRef(0);
 
@@ -80,7 +82,11 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (currentVisit !== visit.current || sequence !== loadSequence.current) return;
       setFeed(next);
       setError(null);
-      if (settingsVersion.current !== undefined && next.settingsVersion !== settingsVersion.current) router.refresh();
+      const catalogChanged = catalogVersion.current !== undefined && next.catalogVersion !== catalogVersion.current;
+      if ((settingsVersion.current !== undefined && next.settingsVersion !== settingsVersion.current) || catalogChanged || catalogRecheck.current) router.refresh();
+      // Recheck once on the following poll in case the first read raced cache invalidation.
+      catalogRecheck.current = catalogChanged;
+      catalogVersion.current = next.catalogVersion;
       settingsVersion.current = next.settingsVersion;
     } catch (err) {
       if (currentVisit === visit.current && sequence === loadSequence.current) setError(errorMessage(err));
@@ -99,6 +105,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       visit.current += 1;
       setFeed(null);
       settingsVersion.current = undefined;
+      catalogVersion.current = undefined;
+      catalogRecheck.current = false;
       try { sessionStorage.removeItem(SYNC_KEY); } catch { /* Storage can be blocked. */ }
       void refresh();
     };

@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
-import { discountPercent, formatGHS } from "@aba-mart/shared";
+import { discountPercent } from "@aba-mart/shared";
 import { RevealOnScroll } from "@/components/animations/RevealOnScroll";
-import { ProductImage } from "@/components/products/ProductImage";
+import { ProductCard } from "@/components/products/ProductCard";
 import { getProducts } from "@/lib/catalog";
 
 /** Real discounted products only. The section is hidden when nothing is on sale. */
 export async function Promotions() {
-  const result = await getProducts({ onSale: true, limit: 3, availability: "in-stock" });
+  const result = await getProducts({ onSale: true, limit: 3 });
   if (!result?.items.length) return null;
 
-  const best = Math.max(0, ...result.items.map((p) => discountPercent(p.price, p.compareAtPrice) ?? 0));
+  const best = Math.max(0, ...result.items.filter((product) => product.inStock).map((p) => discountPercent(p.price, p.compareAtPrice) ?? 0));
 
   return (
     <section className="container-page py-14 sm:py-16" aria-labelledby="deals-heading">
@@ -31,24 +31,8 @@ export async function Promotions() {
           </div>
           <ul className="grid gap-3 sm:grid-cols-3">
             {result.items.map((product) => (
-              <li key={product.id} className="lift">
-                <Link href={`/products/${product.slug}`} className="group block overflow-hidden rounded-2xl bg-white shadow-card">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-cream-200">
-                    <ProductImage src={product.images[0]?.url} alt={product.name} sizes="(min-width: 640px) 220px, 90vw" className="transition-[scale] duration-500 ease-out-soft group-hover:scale-[1.03]" />
-                    {discountPercent(product.price, product.compareAtPrice) && (
-                      <span className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-brand-deep">
-                        -{discountPercent(product.price, product.compareAtPrice)}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="truncate text-sm font-semibold text-ink transition-colors duration-200 group-hover:text-brand">{product.name}</p>
-                    <p className="mt-0.5 text-sm">
-                      <span className="font-bold text-ink">{formatGHS(product.price)}</span>
-                      {product.compareAtPrice && <span className="ml-2 text-xs text-muted line-through">{formatGHS(product.compareAtPrice)}</span>}
-                    </p>
-                  </div>
-                </Link>
+              <li key={product.id} className="rounded-2xl bg-white p-3 shadow-card">
+                <ProductCard product={product} />
               </li>
             ))}
           </ul>
