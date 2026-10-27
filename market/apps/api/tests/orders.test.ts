@@ -218,6 +218,22 @@ describe("order status and inventory", () => {
     expect(restored.body.data.items.find((product: { id: string }) => product.id === gel.id)).toMatchObject({ stock: 5, inStock: true });
   });
 
+  it("preserves recorded order items after bulk product deletion", async () => {
+    const order = await pendingOrder([
+      { productId: gel.id, quantity: 1 },
+      { productId: shirt.id, variantId: shirt.variants[0]!.id, quantity: 1 },
+    ]);
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Confirmed" }).expect(200);
+    const before = (await admin.get(`/api/admin/orders/${order.id}`).expect(200)).body.data;
+    await admin.post("/api/admin/products/bulk-delete", { ids: [gel.id, shirt.id] }).expect(200);
+    const after = (await admin.get(`/api/admin/orders/${order.id}`).expect(200)).body.data;
+    expect(after.items).toEqual(before.items);
+    expect(after.total).toBe(before.total);
+    expect(await Product.countDocuments()).toBe(0);
+    await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Cancelled" }).expect(200);
+    expect(await Product.countDocuments()).toBe(0);
+  });
+
   it("preserves recorded order items after permanent product deletion", async () => {
     const order = await pendingOrder([{ productId: gel.id, quantity: 1 }]);
     await admin.patch(`/api/admin/orders/${order.id}/status`, { status: "Confirmed" }).expect(200);

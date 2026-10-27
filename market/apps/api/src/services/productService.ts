@@ -1,6 +1,7 @@
 import mongoose, { Types, type QueryFilter } from "mongoose";
 import {
   escapeRegExp,
+  bulkProductDeleteSchema,
   productInputSchema,
   slugify,
   variantLabel,
@@ -265,15 +266,25 @@ export async function restoreProduct(id: string): Promise<AdminProductDTO> {
 
 /** Permanently remove the catalog record; orders keep their recorded item snapshots. */
 export async function permanentlyDeleteProduct(id: string): Promise<{ id: string; deleted: true }> {
+  await permanentlyDeleteProducts([id]);
+  return { id, deleted: true };
+}
+
+/** One bounded database write; any missing item or later failure rolls the whole batch back. */
+export async function permanentlyDeleteProducts(ids: string[]): Promise<{ ids: string[]; deletedCount: number }> {
+  const selection = bulkProductDeleteSchema.parse({ ids }).ids;
   await mongoose.connection.transaction(async (session) => {
-    const product = await Product.findByIdAndDelete(id, { session });
-    if (!product) throw ApiError.notFound("Product not found.");
+    const result = await Product.deleteMany({ _id: { $in: selection } }, { session, maxTimeMS: 5000 });
+    if (result.deletedCount !== selection.length) {
+      if (selection.length === 1) throw ApiError.notFound("Product not found.");
+      throw ApiError.conflict("Some selected products no longer exist. Refresh the list and select them again. No products were deleted.", "PRODUCT_SELECTION_CHANGED");
+    }
     // A deletion must refresh storefronts even when another product has a newer updatedAt.
     await nextSequence("catalog-deletions", session);
-  });
+  }, { maxCommitTimeMS: 5000 });
   // Keep uploaded images available for existing order snapshots.
   await revalidateStorefront("products", "categories");
-  return { id, deleted: true };
+  return { ids: selection, deletedCount: selection.length };
 }
 
 /* --------------------------------------------------------------- Inventory */

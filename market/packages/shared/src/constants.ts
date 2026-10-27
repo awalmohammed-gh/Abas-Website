@@ -101,6 +101,7 @@ export const LIMITS = {
   maxCartLines: 50,
   maxLineQuantity: 99,
   maxProductImages: 8,
+  maxProductDeleteBatch: 50,
   maxProductOptions: 3,
   maxOptionValues: 30,
   maxVariants: 100,

@@ -192,6 +192,8 @@ Landing-page motion uses [Motion](https://motion.dev) (`motion` 13.5.1), kept de
 
 All money is stored as **integer pesewas** (GHS 45.00 = `4500`) and formatted only for display. Products have an optional **subcategory** (e.g. "Jeans", "Shower Gel"), shown on cards and included in search. **Archive** hides a product and allows restoration. **Delete** permanently removes its database record after confirmation; existing orders retain their recorded product names, prices, quantities, and images. Uploaded images are retained for those historical orders. Permanent deletion also invalidates storefront caches and updates open storefronts through the catalog revision. A category can't be deleted while any product uses it; hide it instead.
 
+**Bulk product deletion.** Select individual products or the current page, then choose **Delete selected** and review the names before confirming. Changing filters or pages clears the selection. The API accepts only explicit product IDs, caps batches at 50 products, and rate-limits bulk requests. A single transaction deletes the selected products and records the catalog revision; a missing product or database failure rolls the entire batch back. Database operation and commit timeouts bound individual operations. Order snapshots remain intact.
+
 ## Caching
 
 Storefront pages read the catalogue on the server with `"use cache"` and tags (`products`, `categories`, `banners`, `settings`). After any admin change the API calls `POST /api/revalidate` on the web app (shared `REVALIDATE_SECRET`), so changes appear immediately. Without that, cached pages refresh within about a minute.

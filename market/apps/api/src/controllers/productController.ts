@@ -50,3 +50,7 @@ export async function adminRestoreProduct(req: Request, res: Response) {
 export async function adminPermanentlyDeleteProduct(req: Request, res: Response) {
   sendSuccess(res, await productService.permanentlyDeleteProduct(id(req)));
 }
+
+export async function adminBulkDeleteProducts(req: Request, res: Response) {
+  sendSuccess(res, await productService.permanentlyDeleteProducts(req.body.ids));
+}

@@ -15,6 +15,8 @@ interface ProductTableProps {
   onArchive: (product: AdminProductDTO) => void;
   onRestore: (product: AdminProductDTO) => void;
   onDelete: (product: AdminProductDTO) => void;
+  selectedIds: ReadonlySet<string>;
+  onSelectionChange: (id: string, selected: boolean) => void;
 }
 
 function StatusBadges({ product }: { product: AdminProductDTO }) {
@@ -47,7 +49,12 @@ function priceLabel(product: AdminProductDTO) {
   return range.min === range.max ? formatGHS(range.min) : `${formatGHS(range.min)} – ${formatGHS(range.max)}`;
 }
 
-export function ProductTable({ products, busyId, onToggleActive, onToggleFeatured, onArchive, onRestore, onDelete }: ProductTableProps) {
+export function ProductTable({ products, busyId, onToggleActive, onToggleFeatured, onArchive, onRestore, onDelete, selectedIds, onSelectionChange }: ProductTableProps) {
+  const selectionControl = (product: AdminProductDTO) => (
+    <label className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg hover:bg-brand-50">
+      <input type="checkbox" checked={selectedIds.has(product.id)} disabled={busyId !== null} onChange={(event) => onSelectionChange(product.id, event.target.checked)} aria-label={`Select ${product.name}`} className="size-5 accent-brand disabled:cursor-not-allowed" />
+    </label>
+  );
   const actions = (product: AdminProductDTO) => {
     const busy = busyId !== null;
     const iconButton = "inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-brand-50 hover:text-brand disabled:opacity-40";
@@ -118,8 +125,9 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
       {/* Phones and small tablets: cards */}
       <ul className="divide-y divide-line md:hidden">
         {products.map((product) => (
-          <li key={product.id} className="space-y-3 p-4">
+          <li key={product.id} className={cn("space-y-3 p-4", selectedIds.has(product.id) && "bg-brand-50/50")}>
             <div className="flex gap-3">
+              {selectionControl(product)}
               {thumb(product)}
               <div className="min-w-0 flex-1">
                 <Link href={`/admin/products/${product.id}/edit`} className="line-clamp-2 font-semibold text-ink hover:text-brand">
@@ -144,6 +152,7 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
         <table className="w-full text-left text-sm">
           <thead className="border-b border-line bg-cream/60 text-xs uppercase tracking-wider text-muted">
             <tr>
+              <th scope="col" className="w-14 px-2 py-3"><span className="sr-only">Select product</span></th>
               <th scope="col" className="px-5 py-3 font-semibold">Product</th>
               <th scope="col" className="px-3 py-3 font-semibold">Price</th>
               <th scope="col" className="px-3 py-3 font-semibold">Stock</th>
@@ -155,7 +164,8 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
           </thead>
           <tbody className="divide-y divide-line">
             {products.map((product) => (
-              <tr key={product.id} className="hover:bg-cream/50">
+              <tr key={product.id} className={cn("hover:bg-cream/50", selectedIds.has(product.id) && "bg-brand-50/50")}>
+                <td className="px-2 py-3">{selectionControl(product)}</td>
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     {thumb(product)}

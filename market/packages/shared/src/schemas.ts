@@ -7,6 +7,12 @@ import { SLUG_PATTERN } from "./text.js";
 
 export const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, "Invalid id");
 
+/** Explicit, bounded selection only; never accept a query or an "all" flag for deletion. */
+export const bulkProductDeleteSchema = z.object({
+  ids: z.array(objectIdSchema).min(1, "Select at least one product").max(LIMITS.maxProductDeleteBatch, `Select no more than ${LIMITS.maxProductDeleteBatch} products at once`)
+    .transform((ids) => [...new Set(ids.map((id) => id.toLowerCase()))]),
+}).strict();
+
 export const pesewasSchema = z
   .int("Enter a valid amount")
   .min(0, "Amount cannot be negative")

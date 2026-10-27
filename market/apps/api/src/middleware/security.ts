@@ -49,3 +49,4 @@ export const uploadLimiter = limiter(15, 100, "Too many uploads. Please wait a f
 export const pushLimiter = limiter(15, 30, "Too many notification changes. Please wait a few minutes.");
 
 export const publishLimiter = limiter(15, 60, "Too many notifications sent. Please wait a few minutes.");
+export const bulkProductDeleteLimiter = limiter(1, 10, "Too many bulk deletions. Please wait a minute and try again.");
