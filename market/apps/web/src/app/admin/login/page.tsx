@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function AdminLoginPage() {
   const { storeName, logo } = await getMetadataSettings();
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-brand-deep px-4 py-12">
+    <main className="flex min-h-dvh items-center justify-center bg-brand-deep pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center text-cream">
           {logo ? <Logo storeName={storeName} logo={logo} tone="dark" admin /> : <BrandMark className="size-20" inverted admin />}

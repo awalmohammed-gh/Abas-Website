@@ -15,31 +15,15 @@ import {
   type AdminProductDTO,
   type CategoryDTO,
   type ImageAsset,
-  type VariantAttribute,
 } from "@aba-mart/shared";
 import { Button } from "@/components/ui/Button";
-import { Input, Select, Textarea, Toggle } from "@/components/ui/Input";
+import { Input, Select, Toggle } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiClientError, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Panel } from "./AdminUI";
 import { ImageListUploader } from "./ImageUploader";
-
-interface OptionRow {
-  key: string;
-  name: string;
-  valuesText: string;
-}
-
-interface VariantRow {
-  key: string;
-  id?: string;
-  attributes: VariantAttribute[];
-  sku: string;
-  price: string;
-  stock: string;
-  isActive: boolean;
-}
+import { PRODUCT_VARIETIES, isVarietyOption, parseValues, rowKey, syncVariants, toggleVariety, type OptionRow, type VariantRow } from "./productOptions";
 
 interface FormState {
   name: string;
@@ -58,12 +42,6 @@ interface FormState {
   isFeatured: boolean;
   isActive: boolean;
 }
-
-let rowSeed = 0;
-const rowKey = () => `row-${++rowSeed}`;
-
-const parseValues = (text: string) => [...new Set(text.split(",").map((v) => v.trim()).filter(Boolean))];
-const comboKey = (values: string[]) => values.map((v) => v.toLowerCase()).join("|");
 
 function fromProduct(product?: AdminProductDTO | null): FormState {
   if (!product) {
@@ -112,22 +90,6 @@ function fromProduct(product?: AdminProductDTO | null): FormState {
     isFeatured: product.isFeatured,
     isActive: product.isActive,
   };
-}
-
-/** Rebuilds the variant list for the current options, keeping stock/price of combinations that still exist. */
-function syncVariants(options: OptionRow[], current: VariantRow[]): VariantRow[] {
-  const parsed = options.map((o) => ({ name: o.name.trim(), values: parseValues(o.valuesText) })).filter((o) => o.name && o.values.length);
-  if (!parsed.length) return [];
-  let combos: string[][] = [[]];
-  for (const option of parsed) combos = combos.flatMap((combo) => option.values.map((value) => [...combo, value]));
-  combos = combos.slice(0, LIMITS.maxVariants);
-
-  const existing = new Map(current.map((row) => [comboKey(row.attributes.map((a) => a.value)), row]));
-  return combos.map((values) => {
-    const attributes = values.map((value, i) => ({ name: parsed[i]!.name, value }));
-    const match = existing.get(comboKey(values));
-    return match ? { ...match, attributes } : { key: rowKey(), attributes, sku: "", price: "", stock: "0", isActive: true };
-  });
 }
 
 /** Maps API/schema error paths to form field names. */
@@ -260,7 +222,9 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     }
   }
 
-  const slugPreview = form.slug.trim() ? slugify(form.slug) : slugify(form.name);
+  const varietyOption = form.options.find(isVarietyOption);
+  const selectedVarieties = form.hasVariants && varietyOption ? parseValues(varietyOption.valuesText) : [];
+  const varietyChoices = [...PRODUCT_VARIETIES, ...selectedVarieties].filter((value, index, values) => values.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
   const discountValue = parseCedisToPesewas(form.discountPrice);
   const regularValue = parseCedisToPesewas(form.regularPrice);
   const savings = discountValue !== null && regularValue !== null && regularValue > discountValue ? Math.floor(((regularValue - discountValue) * 100) / regularValue) : null;
@@ -270,38 +234,14 @@ export function ProductForm({ product, categories }: ProductFormProps) {
       <div className="min-w-0 space-y-6">
         <Panel title="Details">
           <div className="space-y-4 p-4 sm:p-5">
-            <Input label="Product name" required value={form.name} onChange={(e) => set("name", e.target.value)} error={errors.name} maxLength={120} placeholder="e.g. Dettol Shower Gel 500ml" />
-            <Input
-              label="URL slug"
-              value={form.slug}
-              onChange={(e) => set("slug", e.target.value)}
-              error={errors.slug}
-              maxLength={140}
-              placeholder={slugify(form.name) || "generated-from-name"}
-              hint={slugPreview ? `Product page: /products/${slugPreview}` : "Leave blank to generate from the name"}
-            />
-            <Textarea
-              label="Description"
-              rows={6}
-              value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              error={errors.description}
-              maxLength={5000}
-              hint="Ingredients, sizes, materials, care instructions — whatever helps customers decide."
-            />
-          </div>
-        </Panel>
-
-        <Panel title="Images">
-          <div className="p-4 sm:p-5">
-            <ImageListUploader value={form.images} onChange={(images) => set("images", images)} folder="products" max={LIMITS.maxProductImages} error={errors.images} />
+            <Input label="Product name" required value={form.name} onChange={(e) => set("name", e.target.value)} error={errors.name} maxLength={120} placeholder="e.g. Aba's Liquid Soap 500ml" />
           </div>
         </Panel>
 
         <Panel title="Pricing">
           <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
             <Input
-              label="Regular price"
+              label="Price"
               required
               inputMode="decimal"
               leading="GHS"
@@ -311,7 +251,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
               placeholder="0.00"
             />
             <Input
-              label="Discount price"
+              label="Discounted price (optional)"
               inputMode="decimal"
               leading="GHS"
               value={form.discountPrice}
@@ -323,8 +263,32 @@ export function ProductForm({ product, categories }: ProductFormProps) {
           </div>
         </Panel>
 
-        <Panel title="Variants and stock">
+        <Panel title="Varieties and stock">
           <div className="space-y-5 p-4 sm:p-5">
+            <fieldset>
+              <legend className="text-sm font-semibold text-ink">Variety / scent (optional)</legend>
+              <p className="mt-1 text-xs text-muted">Select the varieties you sell. Each choice has its own stock and appears in the customer&apos;s WhatsApp order.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {varietyChoices.map((value) => {
+                  const checked = selectedVarieties.some((selected) => selected.toLowerCase() === value.toLowerCase());
+                  return (
+                    <label key={value} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm", checked ? "border-brand bg-brand-50 font-semibold text-brand" : "border-line text-ink hover:border-brand/40")}>
+                      <input type="checkbox" checked={checked} className="size-4 accent-brand" onChange={() => {
+                        const next = toggleVariety(form.options, form.hasVariants ? form.variants : [], value, form.stock);
+                        if (!next) { toast.error("Remove an existing option before adding varieties."); return; }
+                        setForm((previous) => ({ ...previous, ...next }));
+                        setDirty(true);
+                        setErrors((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => !/^(options|variants|stock)/.test(key))));
+                      }} />
+                      {value}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <details className="rounded-xl border border-line p-3" open={Object.keys(errors).some((key) => key.startsWith("options")) ? true : undefined}>
+              <summary className="cursor-pointer text-sm font-semibold text-brand">Other options, sizes or bottle volumes</summary>
+              <div className="mt-4 space-y-4">
             <Toggle
               checked={form.hasVariants}
               onChange={(checked) => {
@@ -335,20 +299,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
               description="For example clothing sizes and colours, or bottle volumes. Stock is tracked for each combination."
             />
 
-            {!form.hasVariants ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Stock quantity" required inputMode="numeric" value={form.stock} onChange={(e) => set("stock", e.target.value)} error={errors.stock} />
-                <Input
-                  label="Low-stock alert at"
-                  inputMode="numeric"
-                  value={form.lowStockThreshold}
-                  onChange={(e) => set("lowStockThreshold", e.target.value)}
-                  error={errors.lowStockThreshold}
-                  hint="You'll see an alert at or below this number"
-                />
-              </div>
-            ) : (
-              <div className="space-y-5">
+            {form.hasVariants && (
                 <div className="space-y-3">
                   {form.options.map((option, index) => (
                     <div key={option.key} className="grid gap-2 rounded-xl border border-line bg-cream/50 p-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-start">
@@ -397,49 +348,47 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                   )}
                 </div>
 
-                {form.variants.length > 0 && (
+            )}
+              </div>
+            </details>
+
+            {!form.hasVariants && <Input label="Stock quantity" required inputMode="numeric" value={form.stock} onChange={(e) => set("stock", e.target.value)} error={errors.stock} />}
+                {form.hasVariants && form.variants.length > 0 && (
                   <div className="overflow-hidden rounded-xl border border-line">
-                    <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-3 bg-cream/70 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted md:grid">
-                      <span>Variant</span>
-                      <span>SKU</span>
-                      <span>Price override</span>
+                    <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-3 bg-cream/70 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted md:grid">
+                      <span>Variety / option</span>
+                      <span>Price (optional)</span>
                       <span>Stock</span>
                       <span className="w-16 text-right">Available</span>
                     </div>
                     <ul className="divide-y divide-line">
                       {form.variants.map((variant, i) => (
-                        <li key={variant.key} className="grid grid-cols-2 gap-3 p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] md:items-center">
+                        <li key={variant.key} className="grid grid-cols-2 gap-3 p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] md:items-center">
                           <p className="col-span-2 text-sm font-semibold text-ink md:col-span-1">{variantLabel(variant.attributes)}</p>
-                          <input
-                            aria-label={`SKU for ${variantLabel(variant.attributes)}`}
-                            value={variant.sku}
-                            onChange={(e) => updateVariant(variant.key, { sku: e.target.value })}
-                            placeholder="SKU"
-                            maxLength={60}
-                            className="h-10 rounded-lg border border-line px-3 text-sm"
-                          />
                           <div>
+                            <p className="mb-1 text-xs text-muted md:hidden">Price (optional)</p>
                             <input
                               aria-label={`Price override for ${variantLabel(variant.attributes)} in GHS`}
                               value={variant.price}
                               inputMode="decimal"
                               onChange={(e) => updateVariant(variant.key, { price: e.target.value })}
                               placeholder="Use product price"
-                              className={cn("h-10 w-full rounded-lg border px-3 text-sm", errors[`variants.${i}.price`] ? "border-danger" : "border-line")}
+                              className={cn("h-11 w-full rounded-lg border px-3 text-base md:text-sm", errors[`variants.${i}.price`] ? "border-danger" : "border-line")}
                             />
                             {errors[`variants.${i}.price`] && <p className="mt-1 text-xs text-danger">{errors[`variants.${i}.price`]}</p>}
                           </div>
                           <div>
+                            <p className="mb-1 text-xs text-muted md:hidden">Stock quantity</p>
                             <input
                               aria-label={`Stock for ${variantLabel(variant.attributes)}`}
                               value={variant.stock}
                               inputMode="numeric"
                               onChange={(e) => updateVariant(variant.key, { stock: e.target.value })}
-                              className={cn("h-10 w-full rounded-lg border px-3 text-sm", errors[`variants.${i}.stock`] ? "border-danger" : "border-line")}
+                              className={cn("h-11 w-full rounded-lg border px-3 text-base md:text-sm", errors[`variants.${i}.stock`] ? "border-danger" : "border-line")}
                             />
                             {errors[`variants.${i}.stock`] && <p className="mt-1 text-xs text-danger">{errors[`variants.${i}.stock`]}</p>}
                           </div>
-                          <label className="flex items-center justify-end gap-2 text-xs text-muted md:w-16">
+                          <label className="flex min-h-11 items-center justify-end gap-2 text-xs text-muted md:w-16">
                             <span className="md:sr-only">Available</span>
                             <input
                               type="checkbox"
@@ -454,16 +403,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     </ul>
                   </div>
                 )}
-                <Input
-                  label="Low-stock alert at (per variant)"
-                  inputMode="numeric"
-                  value={form.lowStockThreshold}
-                  onChange={(e) => set("lowStockThreshold", e.target.value)}
-                  error={errors.lowStockThreshold}
-                  wrapperClassName="max-w-xs"
-                />
-              </div>
-            )}
           </div>
         </Panel>
       </div>
@@ -480,15 +419,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
               placeholder="Choose a category"
               options={categories.map((c) => ({ value: c.id, label: c.isActive ? c.name : `${c.name} (hidden)` }))}
             />
-            <Input
-              label="Subcategory"
-              value={form.subCategory}
-              onChange={(e) => set("subCategory", e.target.value)}
-              error={errors.subCategory}
-              maxLength={60}
-              placeholder="e.g. Jeans, Shower Gel"
-              hint="Optional. Shown on product cards and included in search."
-            />
             {categories.length === 0 && (
               <p className="text-xs text-muted">
                 No categories yet.{" "}
@@ -501,14 +431,22 @@ export function ProductForm({ product, categories }: ProductFormProps) {
           </div>
         </Panel>
 
-        <Panel title="Visibility">
-          <div className="space-y-4 p-4 sm:p-5">
-            <Toggle checked={form.isActive} onChange={(v) => set("isActive", v)} label="Show in store" description="Hidden products can't be viewed or ordered." />
-            <Toggle checked={form.isFeatured} onChange={(v) => set("isFeatured", v)} label="Feature on homepage" description="Appears in the Featured products section." />
+        <Panel title="Product photos">
+          <div className="p-4 sm:p-5">
+            <ImageListUploader value={form.images} onChange={(images) => set("images", images)} folder="products" max={LIMITS.maxProductImages} error={errors.images} />
           </div>
         </Panel>
 
-        <div className="sticky bottom-4 flex gap-2 rounded-2xl border border-line bg-white p-3 shadow-pop xl:static xl:shadow-none">
+        <details className="rounded-2xl border border-line bg-white p-4 sm:p-5" open={errors.lowStockThreshold ? true : undefined}>
+          <summary className="cursor-pointer text-sm font-semibold text-brand">More product settings</summary>
+          <div className="mt-4 space-y-4">
+            <Input label="Low-stock alert at" inputMode="numeric" value={form.lowStockThreshold} onChange={(e) => set("lowStockThreshold", e.target.value)} error={errors.lowStockThreshold} />
+            <Toggle checked={form.isActive} onChange={(v) => set("isActive", v)} label="Show in store" description="Hidden products can't be viewed or ordered." />
+            <Toggle checked={form.isFeatured} onChange={(v) => set("isFeatured", v)} label="Feature on homepage" description="Appears in the Featured products section." />
+          </div>
+        </details>
+
+        <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex gap-2 rounded-2xl border border-line bg-white p-3 shadow-pop xl:static xl:shadow-none">
           <Button type="button" variant="secondary" className="flex-1" onClick={() => router.push("/admin/products")} disabled={saving}>
             Cancel
           </Button>

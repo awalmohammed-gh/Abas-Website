@@ -120,7 +120,7 @@ export function AdminNotificationBell() {
         aria-expanded={open}
         aria-controls="admin-alerts"
         aria-label={unread ? `Alerts, ${unread} unread` : "Alerts"}
-        className="relative inline-flex size-10 items-center justify-center rounded-xl text-ink hover:bg-brand-50"
+        className="relative inline-flex size-11 items-center justify-center rounded-xl text-ink hover:bg-brand-50"
       >
         <FiBell className="size-5" />
         {unread > 0 && (
@@ -134,7 +134,7 @@ export function AdminNotificationBell() {
           id="admin-alerts"
           role="dialog"
           aria-label="Alerts"
-          className="fixed inset-x-3 top-[68px] z-50 flex max-h-[calc(100dvh-84px)] animate-pop-in flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-pop sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[24rem]"
+          className="fixed left-[max(0.75rem,env(safe-area-inset-left))] right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(4.25rem+env(safe-area-inset-top))] z-50 flex max-h-[calc(100dvh-5.25rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] animate-pop-in flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-pop sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[24rem]"
         >
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-4 py-3">
             <h2 className="font-display text-base font-semibold text-ink">Order alerts</h2>

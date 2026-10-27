@@ -220,14 +220,6 @@ export function ProductDetails({ product, whatsappEnabled, whatsappNotice }: { p
           </p>
         </div>
 
-        {product.description && (
-          <section aria-labelledby="description-heading" className="space-y-2">
-            <h2 id="description-heading" className="text-lg font-semibold text-ink">
-              Description
-            </h2>
-            <div className="whitespace-pre-line text-[15px] leading-relaxed text-ink/85">{product.description}</div>
-          </section>
-        )}
       </div>
     </div>
   );

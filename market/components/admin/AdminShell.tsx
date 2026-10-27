@@ -61,7 +61,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
             aria-label="Admin menu"
             onCancel={(event) => { event.preventDefault(); setMenuOpen(false); }}
             onClick={(event) => { if (event.target === menuRef.current) setMenuOpen(false); }}
-            className="mobile-menu fixed inset-x-0 top-0 bottom-auto m-0 h-[min(100dvh,40rem)] max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
+            className="mobile-menu fixed inset-x-0 top-0 bottom-auto z-50 m-0 h-[min(100dvh,40rem)] max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
           >
             <div className="relative h-full min-h-0 min-w-0 shadow-pop">
               <AdminSidebar onNavigate={() => setMenuOpen(false)} storeName={storeName} logo={logo} />
@@ -69,7 +69,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
                 type="button"
                 autoFocus
                 onClick={() => setMenuOpen(false)}
-                className="absolute right-3 top-3 inline-flex size-10 items-center justify-center rounded-xl text-cream hover:bg-white/10"
+                className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(0.625rem+env(safe-area-inset-top))] inline-flex size-11 items-center justify-center rounded-xl text-cream hover:bg-white/10"
                 aria-label="Close admin menu"
               >
                 <FiX className="size-5" />
@@ -79,7 +79,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
           <AdminHeader onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
-          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+          <main className="min-w-0 flex-1 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:pt-8 lg:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pl-[max(2rem,env(safe-area-inset-left))] lg:pr-[max(2rem,env(safe-area-inset-right))]">{children}</main>
         </div>
       </div>
     </>

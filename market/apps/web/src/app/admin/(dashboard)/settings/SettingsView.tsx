@@ -377,7 +377,7 @@ function SettingsForm({ initial, onSaved }: { initial: StoreSettingsDTO; onSaved
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 py-3 backdrop-blur lg:left-64">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur lg:left-64">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-end gap-3">
           <p className={cn("mr-auto text-sm", dirty ? "font-medium text-accent-700" : "text-muted")} role="status">
             {dirty ? "You have unsaved changes" : "All changes saved"}

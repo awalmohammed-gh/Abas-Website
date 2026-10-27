@@ -14,11 +14,12 @@ export function AdminHeader({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; 
   const title = pathname.endsWith("/edit") ? "Edit product" : current?.label ?? "Admin";
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-line bg-white/95 px-4 py-2 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 border-b border-line bg-brand-deep pt-[env(safe-area-inset-top)]">
+      <div className="flex min-h-16 min-w-0 items-center gap-3 bg-white py-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]">
       <button
         type="button"
         onClick={onOpenMenu}
-        className="-ml-1 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
+        className="-ml-1 inline-flex size-11 shrink-0 items-center justify-center rounded-xl text-ink hover:bg-brand-50 lg:hidden"
         aria-label="Open admin menu"
         aria-expanded={menuOpen}
         aria-controls="admin-menu"
@@ -26,7 +27,7 @@ export function AdminHeader({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; 
         <FiMenu className="size-6" />
       </button>
       <p className="min-w-0 truncate font-display text-lg font-semibold text-ink">{title}</p>
-      <div className="ml-auto flex min-w-0 items-center gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         <InstallPwaButton variant="admin-header" />
         <AdminNotificationBell />
         <div className="hidden min-w-0 text-right sm:block">
@@ -36,6 +37,7 @@ export function AdminHeader({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; 
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-cream" aria-hidden="true">
           {admin.name.charAt(0).toUpperCase()}
         </span>
+      </div>
       </div>
     </header>
   );

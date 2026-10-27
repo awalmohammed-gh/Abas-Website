@@ -31,8 +31,8 @@ export function AdminSidebar({ onNavigate, storeName, logo }: { onNavigate?: () 
   const { logout } = useAdminSession();
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col bg-brand-deep text-cream">
-      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-brand-deep pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] text-cream">
+      <div className="flex h-16 shrink-0 items-center border-b border-white/10 pl-5 pr-16 lg:pr-5">
         <Link href="/admin" onClick={onNavigate} aria-label="Admin overview">
           <Logo tone="dark" storeName={storeName} logo={logo} admin />
         </Link>
