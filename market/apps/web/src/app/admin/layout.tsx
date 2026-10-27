@@ -7,6 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: "Admin", template: `%s | ${storeName} Admin` },
     robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+    manifest: "/admin-manifest.json",
   };
 }
 

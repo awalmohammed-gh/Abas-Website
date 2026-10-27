@@ -6,7 +6,7 @@ import { whatsappOrderingNotice } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
   title: "Your cart",
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
   alternates: { canonical: "/cart" },
 };
 

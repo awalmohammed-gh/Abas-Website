@@ -4,6 +4,8 @@ import { FaWhatsapp } from "react-icons/fa";
 import { FiArrowRight } from "react-icons/fi";
 import { Benefits } from "@/components/home/Benefits";
 import { ButtonLink } from "@/components/ui/Button";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { siteConfig } from "@/config/site";
 import { getMetadataSettings, getSettings } from "@/lib/catalog";
 import { supportChatUrl } from "@/lib/whatsapp";
 
@@ -51,8 +53,19 @@ async function AboutCta() {
 }
 
 export default function AboutPage() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url;
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "About us", item: `${siteUrl}/about` },
+    ],
+  };
+
   return (
     <>
+      <JsonLd data={breadcrumbSchema} />
       <section className="container-page py-12 sm:py-16">
         <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">About us</p>
         <h1 className="max-w-3xl text-4xl font-bold leading-tight text-ink sm:text-5xl">Everyday essentials, with a personal touch.</h1>

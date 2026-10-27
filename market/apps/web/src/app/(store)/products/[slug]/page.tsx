@@ -7,7 +7,9 @@ import { priceRange, type ProductDTO } from "@aba-mart/shared";
 import { SectionHeading } from "@/components/home/SectionHeading";
 import { ProductDetails } from "@/components/products/ProductDetails";
 import { ProductGrid } from "@/components/products/ProductGrid";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { siteConfig } from "@/config/site";
 import { getMetadataSettings, getProduct, getSettings } from "@/lib/catalog";
 import { whatsappOrderingNotice } from "@/lib/whatsapp";
 import { absoluteUrl } from "@/lib/utils";
@@ -16,29 +18,57 @@ export async function generateMetadata({ params }: PageProps<"/products/[slug]">
   const { slug } = await params;
   const [result, { storeName }] = await Promise.all([getProduct(slug), getMetadataSettings()]);
   if (result.status !== "found") return { title: "Product not found", robots: { index: false } };
+
   const { product } = result;
-  const description = (product.description || `${product.name} available at ${storeName}. Order on WhatsApp.`).slice(0, 160);
+  const range = priceRange(product);
+  const minPriceGhs = (range.min / 100).toFixed(2);
+  const maxPriceGhs = (range.max / 100).toFixed(2);
+  const priceDisplay = range.min === range.max ? `GH₵ ${minPriceGhs}` : `GH₵ ${minPriceGhs} – ${maxPriceGhs}`;
+
+  const categoryPath = [product.category?.name, product.subCategory].filter(Boolean).join(" · ");
+  const description = (
+    product.description ||
+    `Buy ${product.name} ${categoryPath ? `(${categoryPath})` : ""} online in Ghana for ${priceDisplay} at ${storeName}. Order on WhatsApp with fast delivery.`
+  ).slice(0, 160);
+
+  const ogImages = product.images.slice(0, 4).map((image) => ({
+    url: image.url,
+    alt: image.alt || `${product.name} at ${storeName}`,
+  }));
+
   return {
-    title: product.name,
+    title: `${product.name} — ${priceDisplay}`,
     description,
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
-      title: product.name,
+      locale: "en_GH",
+      siteName: storeName,
+      title: `${product.name} — ${priceDisplay} | ${storeName}`,
       description,
       url: `/products/${product.slug}`,
-      images: product.images.slice(0, 1).map((image) => ({ url: image.url, alt: image.alt || product.name })),
+      images: ogImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} — ${priceDisplay}`,
+      description,
+      images: ogImages.slice(0, 1).map((i) => i.url),
     },
   };
 }
 
-function productJsonLd(product: ProductDTO, storeName: string) {
+function buildProductSchemas(product: ProductDTO, storeName: string) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url;
   const range = priceRange(product);
   const toCedis = (pesewas: number) => (pesewas / 100).toFixed(2);
   const availability = product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
-  return {
+  const productUrl = absoluteUrl(`/products/${product.slug}`);
+
+  const productSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
+    "@id": `${productUrl}#product`,
     name: product.name,
     description: product.description || undefined,
     image: product.images.map((i) => i.url),
@@ -49,22 +79,54 @@ function productJsonLd(product: ProductDTO, storeName: string) {
       range.min === range.max
         ? {
             "@type": "Offer",
-            url: absoluteUrl(`/products/${product.slug}`),
+            url: productUrl,
             priceCurrency: "GHS",
             price: toCedis(range.min),
             availability,
+            itemCondition: "https://schema.org/NewCondition",
             seller: { "@type": "Organization", name: storeName },
           }
         : {
             "@type": "AggregateOffer",
-            url: absoluteUrl(`/products/${product.slug}`),
+            url: productUrl,
             priceCurrency: "GHS",
             lowPrice: toCedis(range.min),
             highPrice: toCedis(range.max),
             offerCount: product.variants.length,
             availability,
+            seller: { "@type": "Organization", name: storeName },
           },
   };
+
+  const breadcrumbs = [
+    { name: "Home", url: siteUrl },
+    { name: "Shop", url: `${siteUrl}/shop` },
+  ];
+
+  if (product.category) {
+    breadcrumbs.push({
+      name: product.category.name,
+      url: `${siteUrl}/categories/${product.category.slug}`,
+    });
+  }
+
+  breadcrumbs.push({
+    name: product.name,
+    url: productUrl,
+  });
+
+  const breadcrumbSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: breadcrumbs.map((b, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      name: b.name,
+      item: b.url,
+    })),
+  };
+
+  return [productSchema, breadcrumbSchema];
 }
 
 async function ProductContent({ params }: { params: PageProps<"/products/[slug]">["params"] }) {
@@ -75,14 +137,11 @@ async function ProductContent({ params }: { params: PageProps<"/products/[slug]"
     return <EmptyState icon={<FiAlertCircle />} title="We couldn't load this product" description="Please refresh the page in a moment." />;
   }
   const { product, related } = result;
+  const schemas = buildProductSchemas(product, settings.storeName);
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        // JSON-LD must be raw; "<" is escaped so product text can't break out of the script tag.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(product, settings.storeName)).replace(/</g, "\\u003c") }}
-      />
+      <JsonLd data={schemas} />
       <nav aria-label="Breadcrumb" className="mb-6 text-sm text-muted">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
@@ -91,18 +150,20 @@ async function ProductContent({ params }: { params: PageProps<"/products/[slug]"
             </Link>
           </li>
           <li aria-hidden="true">/</li>
-          {product.category ? (
-            <li>
-              <Link href={`/categories/${product.category.slug}`} className="hover:text-brand">
-                {product.category.name}
-              </Link>
-            </li>
-          ) : (
-            <li>
-              <Link href="/shop" className="hover:text-brand">
-                Shop
-              </Link>
-            </li>
+          <li>
+            <Link href="/shop" className="hover:text-brand">
+              Shop
+            </Link>
+          </li>
+          {product.category && (
+            <>
+              <li aria-hidden="true">/</li>
+              <li>
+                <Link href={`/categories/${product.category.slug}`} className="hover:text-brand">
+                  {product.category.name}
+                </Link>
+              </li>
+            </>
           )}
           <li aria-hidden="true">/</li>
           <li aria-current="page" className="line-clamp-1 font-medium text-ink">

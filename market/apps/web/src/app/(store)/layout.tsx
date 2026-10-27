@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { SiteHeader, SiteHeaderSkeleton } from "@/components/layout/SiteHeader";
 import { CartProvider } from "@/contexts/CartContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+
+export const metadata: Metadata = {
+  manifest: "/manifest.json",
+};
 
 export default function StoreLayout({ children }: { children: ReactNode }) {
   return (

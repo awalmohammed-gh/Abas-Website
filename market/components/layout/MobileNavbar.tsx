@@ -9,6 +9,7 @@ import { Logo } from "@/components/brand/Logo";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import type { NavCategory } from "./Navbar";
+import { InstallPwaButton } from "@/components/ui/InstallPwaButton";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
 interface MobileNavbarProps {
@@ -138,6 +139,7 @@ export function MobileNavbar({ open, onClose, storeName, logo, pathname, categor
         </nav>
 
         <div className="shrink-0 space-y-2 border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <InstallPwaButton variant="mobile" onInstalled={onClose} />
           {chatUrl && (
             <a
               href={chatUrl}

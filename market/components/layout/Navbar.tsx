@@ -12,6 +12,7 @@ import { siteConfig } from "@/config/site";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 import { whatsappChatUrl } from "@/lib/whatsapp";
+import { InstallPwaButton } from "@/components/ui/InstallPwaButton";
 import { MobileNavbar } from "./MobileNavbar";
 
 export interface NavCategory {
@@ -193,6 +194,8 @@ export function Navbar({ storeName, logo, whatsappNumber, supportMessage, suppor
           >
             {searchOpen ? <FiX className="size-5" /> : <FiSearch className="size-5" />}
           </button>
+
+          <InstallPwaButton variant="navbar" />
 
           {chatUrl && (
             <a

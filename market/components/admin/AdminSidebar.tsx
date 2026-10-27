@@ -34,7 +34,7 @@ export function AdminSidebar({ onNavigate, storeName, logo }: { onNavigate?: () 
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-brand-deep text-cream">
       <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
         <Link href="/admin" onClick={onNavigate} aria-label="Admin overview">
-          <Logo tone="dark" storeName={storeName} logo={logo} />
+          <Logo tone="dark" storeName={storeName} logo={logo} admin />
         </Link>
       </div>
       <nav aria-label="Admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">

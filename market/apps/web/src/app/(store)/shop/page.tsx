@@ -3,12 +3,36 @@ import { Suspense } from "react";
 import { FiCreditCard, FiMessageCircle, FiTag } from "react-icons/fi";
 import { ProductGridSkeleton } from "@/components/products/ProductGrid";
 import { ProductListing } from "@/components/products/ProductListing";
+import { getMetadataSettings } from "@/lib/catalog";
 
-export const metadata: Metadata = {
-  title: "Shop all products",
-  description: "Browse soaps, shower gels, skincare, clothing, household essentials and more. Order on WhatsApp in minutes.",
-  alternates: { canonical: "/shop" },
-};
+export async function generateMetadata({ searchParams }: PageProps<"/shop">): Promise<Metadata> {
+  const { q } = await searchParams;
+  const { storeName } = await getMetadataSettings();
+
+  const title = q ? `Search results for "${q}"` : "All Products — Shop Online in Ghana";
+  const description = q
+    ? `Explore search results for "${q}" at ${storeName}. Order on WhatsApp for fast delivery across Ghana.`
+    : `Browse soaps, shower gels, skincare, clothing, household essentials and more at ${storeName}. Order easily on WhatsApp with fast delivery in Ghana.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: "/shop" },
+    openGraph: {
+      type: "website",
+      locale: "en_GH",
+      siteName: storeName,
+      title: `${title} | ${storeName}`,
+      description,
+      url: "/shop",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | ${storeName}`,
+      description,
+    },
+  };
+}
 
 const PERKS = [
   { icon: FiMessageCircle, label: "Order on WhatsApp" },

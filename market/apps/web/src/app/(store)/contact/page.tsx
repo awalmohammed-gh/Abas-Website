@@ -6,6 +6,8 @@ import { formatPhoneDisplay } from "@aba-mart/shared";
 import { getMetadataSettings, getSettings } from "@/lib/catalog";
 import { supportChatUrl } from "@/lib/whatsapp";
 import { ContactForm } from "@/components/contact/ContactForm";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { siteConfig } from "@/config/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { storeName } = await getMetadataSettings();
@@ -67,8 +69,19 @@ async function ContactDetails() {
 }
 
 export default function ContactPage() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url;
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: siteUrl },
+      { "@type": "ListItem", position: 2, name: "Contact us", item: `${siteUrl}/contact` },
+    ],
+  };
+
   return (
     <div className="container-page py-12 sm:py-16">
+      <JsonLd data={breadcrumbSchema} />
       <header className="mb-8 max-w-2xl">
         <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Contact</p>
         <h1 className="text-4xl font-bold text-ink sm:text-5xl">We&apos;re here to help</h1>

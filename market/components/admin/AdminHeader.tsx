@@ -5,6 +5,7 @@ import { FiMenu } from "react-icons/fi";
 import { AdminNotificationBell } from "./AdminNotificationBell";
 import { useAdminSession } from "./AdminSession";
 import { ADMIN_NAV, isNavActive } from "./AdminSidebar";
+import { InstallPwaButton } from "@/components/ui/InstallPwaButton";
 
 export function AdminHeader({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; menuOpen: boolean }) {
   const pathname = usePathname();
@@ -26,6 +27,7 @@ export function AdminHeader({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; 
       </button>
       <p className="min-w-0 truncate font-display text-lg font-semibold text-ink">{title}</p>
       <div className="ml-auto flex min-w-0 items-center gap-3">
+        <InstallPwaButton variant="admin-header" />
         <AdminNotificationBell />
         <div className="hidden min-w-0 text-right sm:block">
           <p className="text-sm font-semibold leading-tight text-ink">{admin.name}</p>
