@@ -3,7 +3,7 @@ import { Logo } from "@/components/brand/Logo";
 import { ProductImage } from "@/components/products/ProductImage";
 import { ButtonLink } from "@/components/ui/Button";
 
-const date = (value: string) => new Intl.DateTimeFormat("en-GH", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Accra" }).format(new Date(value));
+import { formatDateTime } from "@/lib/time";
 
 /** The shared view accepts a product-only DTO, never a private customer order. */
 export function OrderPreview({ order, logo = null }: { order: OrderPreviewDTO; logo?: ImageAsset | null }) {
@@ -13,7 +13,7 @@ export function OrderPreview({ order, logo = null }: { order: OrderPreviewDTO; l
       <div className="text-right">
         <p className="text-xs font-semibold uppercase tracking-widest text-brand">Order preview</p>
         <h1 className="mt-1 text-2xl font-bold text-ink sm:text-3xl">{order.orderReference}</h1>
-        <p className="mt-1 text-xs text-muted">Prepared {date(order.createdAt)}</p>
+        <p className="mt-1 text-xs text-muted">Prepared {formatDateTime(order.createdAt)}</p>
       </div>
     </header>
     <div className="px-5 py-6 sm:px-8">
@@ -38,7 +38,7 @@ export function OrderPreview({ order, logo = null }: { order: OrderPreviewDTO; l
     <footer className="space-y-5 bg-brand-50 px-5 py-6 sm:px-8">
       <div className="flex items-center justify-between gap-4"><p className="font-semibold text-brand">Grand total</p><p className="text-3xl font-bold text-brand-deep">{formatGHS(order.total)}</p></div>
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-brand/10 pt-4">
-        <p className="max-w-md text-xs leading-relaxed text-muted">This shared preview contains products and totals only. It expires {date(order.expiresAt)}. This is an order request, not a payment receipt.</p>
+        <p className="max-w-md text-xs leading-relaxed text-muted">This shared preview contains products and totals only. It expires {formatDateTime(order.expiresAt)}. This is an order request, not a payment receipt.</p>
         <ButtonLink href="/shop" variant="secondary" size="sm">Browse the shop</ButtonLink>
       </div>
     </footer>

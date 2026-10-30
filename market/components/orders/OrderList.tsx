@@ -15,6 +15,7 @@ import { ensureGuestSession, GUEST_CHANGED_EVENT, guestApi } from "@/lib/guest-a
 import { initiateOrderHandoff } from "@/lib/order-handoff";
 import { GuestPrivacy } from "./GuestPrivacy";
 import { useNotifications } from "@/contexts/NotificationsContext";
+import { formatDateTime } from "@/lib/time";
 
 function OrderItems({ order }: { order: CustomerOrderDTO }) {
   return <ul className="divide-y divide-line">
@@ -130,7 +131,7 @@ export function OrderList() {
     {loading ? <div className="skeleton h-64" aria-label="Loading your orders" /> : result && !result.items.length ? <EmptyState icon={<FiPackage />} title="No orders in this visit yet" description="Your prepared WhatsApp orders will appear here. If you cleared cookies, use a private recovery code below to restore an earlier visit." action={<ButtonLink href="/shop">Browse the shop</ButtonLink>} /> :
       <div className="grid items-start gap-5 lg:grid-cols-2">{result?.items.map((order) => <article key={order.id} className="rounded-2xl border border-line bg-white p-5 shadow-card sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><h2 className="text-lg font-bold">{order.orderReference}</h2><p className="mt-1 text-xs text-muted">{new Date(order.createdAt).toLocaleString("en-GH", { dateStyle: "medium", timeStyle: "short" })}</p></div>
+          <div><h2 className="text-lg font-bold">{order.orderReference}</h2><p className="mt-1 text-xs text-muted">{formatDateTime(order.createdAt)}</p></div>
           <Badge tone={order.status === "Completed" ? "success" : order.status === "Cancelled" ? "danger" : "brand"}>{order.status}</Badge>
         </div>
         <OrderItems order={order} />

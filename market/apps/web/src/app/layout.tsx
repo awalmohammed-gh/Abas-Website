@@ -77,7 +77,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-GH" data-scroll-behavior="smooth" className={`${inter.variable} ${dmSans.variable} antialiased`}>
+    <html lang="en-GH" data-scroll-behavior="smooth" className={`${inter.variable} ${dmSans.variable} antialiased`} suppressHydrationWarning>
       {/* Browser extensions such as Grammarly can add body attributes before hydration. */}
       <body className="flex min-h-dvh min-w-0 flex-col" suppressHydrationWarning>
         <PwaInstallProvider>

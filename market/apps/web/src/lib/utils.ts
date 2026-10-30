@@ -19,17 +19,7 @@ export function pluralize(count: number, singular: string, plural = `${singular}
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-export function formatDateTime(iso: string): string {
-  return dateFormatter.format(new Date(iso));
-}
+export { formatDateTime } from "./time";
 
 /** Builds a query string from defined, non-default values. */
 export function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {

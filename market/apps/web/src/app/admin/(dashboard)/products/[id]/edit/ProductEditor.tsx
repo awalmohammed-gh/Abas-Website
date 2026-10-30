@@ -7,6 +7,7 @@ import { ProductForm } from "@/components/admin/ProductForm";
 import { Badge } from "@/components/ui/Badge";
 import { ButtonLink } from "@/components/ui/Button";
 import { useAdminResource } from "@/hooks/useAdminResource";
+import { formatDateTime } from "@/lib/time";
 
 export function ProductEditor({ id }: { id: string }) {
   const product = useAdminResource<AdminProductDTO>(/^[a-f\d]{24}$/i.test(id) ? `/admin/products/${id}` : null);
@@ -25,7 +26,7 @@ export function ProductEditor({ id }: { id: string }) {
         description={
           <span className="inline-flex flex-wrap items-center gap-2">
             {data.isArchived ? <Badge>Archived</Badge> : data.isActive ? <Badge tone="success">Visible in store</Badge> : <Badge>Hidden</Badge>}
-            <span>Last updated {new Date(data.updatedAt).toLocaleString("en-GB")}</span>
+            <span>Last updated {formatDateTime(data.updatedAt)}</span>
           </span>
         }
         actions={

@@ -21,6 +21,7 @@ import { useAdminResource } from "@/hooks/useAdminResource";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ApiClientError, api } from "@/lib/api";
 import { buildQuery } from "@/lib/utils";
+import { storeDateTimeToIso } from "@/lib/time";
 
 interface Draft {
   type: CustomerNotificationType;
@@ -101,10 +102,15 @@ export function NotificationComposer({
   };
 
   async function save(publish: boolean) {
+    const expiresAt = form.expiresAt ? storeDateTimeToIso(form.expiresAt) : null;
+    if (form.expiresAt && !expiresAt) {
+      setErrors({ expiresAt: "Enter a valid date and time in Ghana time (GMT)." });
+      return;
+    }
     const payload = {
       ...form,
       sendPush: pushConfigured && (form.audience === "push_subscribers" || form.sendPush),
-      expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+      expiresAt,
       publish,
     };
     const parsed = notificationInputSchema.safeParse(payload);
@@ -214,6 +220,7 @@ export function NotificationComposer({
         />
         <Input
           label="Stop showing after (optional)"
+          hint="Ghana time (GMT / Africa/Accra)."
           type="datetime-local"
           value={form.expiresAt}
           onChange={(e) => set("expiresAt", e.target.value)}

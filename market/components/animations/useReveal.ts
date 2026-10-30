@@ -54,6 +54,12 @@ export function useReveal<T extends HTMLElement>({ items, stagger = STAGGER, dur
             return;
           }
           targets = items ? Array.from(root.querySelectorAll<HTMLElement>(items)).slice(0, MAX_STAGGERED) : [root];
+          // Empty grids have no children to animate (for example, a new catalogue).
+          if (!targets.length) {
+            state = "done";
+            observer.disconnect();
+            return;
+          }
           targets.forEach((el) => {
             el.style.opacity = "0";
             el.style.translate = hidden;
@@ -64,9 +70,19 @@ export function useReveal<T extends HTMLElement>({ items, stagger = STAGGER, dur
         if (state === "waiting" && entry.isIntersecting) {
           state = "done";
           observer.disconnect();
-          animate(targets, { opacity: [0, 1], translate: [hidden, "0 0"] }, { duration, ease: EASE_OUT, delay: (i: number) => i * stagger })
-            // Hand control back to the stylesheet (hover effects also use `translate`).
-            .then(clear, clear);
+          const connectedTargets = targets.filter((el) => el.isConnected && root.contains(el));
+          if (!connectedTargets.length) {
+            clear();
+            return;
+          }
+          try {
+            animate(connectedTargets, { opacity: [0, 1], translate: [hidden, "0 0"] }, { duration, ease: EASE_OUT, delay: (i: number) => i * stagger })
+              // Hand control back to the stylesheet (hover effects also use `translate`).
+              .then(clear, clear);
+          } catch {
+            // Decoration must never leave content hidden or interrupt the page.
+            clear();
+          }
         }
       },
       // Reveal once the top edge is a little way into the viewport.
@@ -74,6 +90,7 @@ export function useReveal<T extends HTMLElement>({ items, stagger = STAGGER, dur
     );
     observer.observe(root);
     return () => {
+      state = "done";
       observer.disconnect();
       clear();
     };

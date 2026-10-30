@@ -7,11 +7,12 @@ import { formatPhoneDisplay, type SocialLinks } from "@aba-mart/shared";
 import { Logo } from "@/components/brand/Logo";
 import { getCategories, getSettings } from "@/lib/catalog";
 import { supportChatUrl } from "@/lib/whatsapp";
+import { STORE_TIME_ZONE } from "@/lib/time";
 
 async function copyrightYear() {
   "use cache";
   cacheLife("days");
-  return new Date().getFullYear();
+  return new Intl.DateTimeFormat("en-GH", { year: "numeric", timeZone: STORE_TIME_ZONE }).format(new Date());
 }
 
 const SOCIAL: { key: keyof SocialLinks; label: string; icon: IconType }[] = [

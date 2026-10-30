@@ -18,7 +18,29 @@ export function formatRelativeTime(iso: string, now = Date.now()): string {
   return formatter.format(Math.round(seconds / 60), "minute");
 }
 
-/** "15 Oct 2026, 14:05" in Ghana time. */
+export const STORE_TIME_ZONE = "Africa/Accra";
+
+const dateFormatter = new Intl.DateTimeFormat("en-GH", {
+  day: "numeric", month: "short", year: "numeric", timeZone: STORE_TIME_ZONE,
+});
+const dateTimeFormatter = new Intl.DateTimeFormat("en-GH", {
+  day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  hourCycle: "h23", timeZone: STORE_TIME_ZONE, timeZoneName: "short",
+});
+
+export function formatDate(iso: string): string {
+  return dateFormatter.format(new Date(iso));
+}
+
+/** A consistent Ghana date and time, including GMT, on both server and client. */
 export function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("en-GH", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Accra" }).format(new Date(iso));
+  return dateTimeFormatter.format(new Date(iso));
+}
+
+/** datetime-local has no offset. Ghana uses GMT (UTC+00), regardless of the admin's device zone. */
+export function storeDateTimeToIso(value: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 16) !== value) return null;
+  return date.toISOString();
 }

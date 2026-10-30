@@ -8,6 +8,7 @@ import { cartStore } from "@/contexts/cartStore";
 import { errorMessage } from "@/lib/api";
 import { acceptGuestSession, GUEST_CHANGED_EVENT, guestApi } from "@/lib/guest-api";
 import { confirm } from "@/components/ui/ConfirmDialog";
+import { formatDateTime } from "@/lib/time";
 
 export function GuestPrivacy({ onChanged }: { onChanged: () => void }) {
   const [token, setToken] = useState("");
@@ -69,7 +70,7 @@ export function GuestPrivacy({ onChanged }: { onChanged: () => void }) {
           {recovery && <div className="mt-3 rounded-xl bg-brand-50 p-4">
             <p className="mb-2 font-medium">Save this code privately. Anyone with it can access this visit’s cart and orders.</p>
             <code className="block select-all break-all rounded-lg bg-white p-3 font-mono">{recovery.token}</code>
-            <p className="mt-2 text-xs text-muted">One use · Expires {new Date(recovery.expiresAt).toLocaleDateString("en-GH")}. It is shown only on this page.</p>
+            <p className="mt-2 text-xs text-muted">One use · Expires {formatDateTime(recovery.expiresAt)}. It is shown only on this page.</p>
           </div>}
         </div>
         <form className="max-w-xl space-y-3" onSubmit={(event) => { event.preventDefault(); void action("recover"); }}>
