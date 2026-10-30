@@ -196,6 +196,14 @@
     opacity: 1;
   }
 
+  .mobile-menu.admin-menu {
+    transform: translateX(-100%);
+  }
+
+  .mobile-menu.admin-menu[open] {
+    transform: translateX(0);
+  }
+
   @starting-style {
     .mobile-menu[open] {
       opacity: 0;
@@ -204,6 +212,17 @@
 
     .mobile-menu[open]::backdrop {
       opacity: 0;
+    }
+
+    .mobile-menu.admin-menu[open] {
+      transform: translateX(-100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-menu.admin-menu,
+    .mobile-menu.admin-menu::backdrop {
+      transition: none;
     }
   }
 }

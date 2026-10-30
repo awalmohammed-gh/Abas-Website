@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiCheck, FiPlus, FiTrash2 } from "react-icons/fi";
 import {
   LIMITS,
+  categoryInputSchema,
   flattenIssues,
   parseCedisToPesewas,
   pesewasToInput,
@@ -15,15 +15,40 @@ import {
   type AdminProductDTO,
   type CategoryDTO,
   type ImageAsset,
+  type ProductInput,
 } from "@aba-mart/shared";
 import { Button } from "@/components/ui/Button";
-import { Input, Select, Toggle } from "@/components/ui/Input";
+import { Input, Textarea, Toggle } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiClientError, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Panel } from "./AdminUI";
 import { ImageListUploader } from "./ImageUploader";
-import { PRODUCT_VARIETIES, isVarietyOption, parseValues, rowKey, syncVariants, toggleVariety, type OptionRow, type VariantRow } from "./productOptions";
+import { parseValues, rowKey, syncVariants, type OptionRow, type VariantRow } from "./productOptions";
+
+const isSize = (option: OptionRow) => /^(size|volume|bottle size|capacity)$/i.test(option.name.trim());
+const isColour = (option: OptionRow) => /^(colou?r)$/i.test(option.name.trim());
+const COLOUR_PALETTE = [
+  { name: "Black", hex: "#171717" },
+  { name: "White", hex: "#ffffff" },
+  { name: "Grey", hex: "#808080" },
+  { name: "Navy", hex: "#1e3a5f" },
+  { name: "Blue", hex: "#2563eb" },
+  { name: "Sky blue", hex: "#7dd3fc" },
+  { name: "Red", hex: "#dc2626" },
+  { name: "Burgundy", hex: "#800020" },
+  { name: "Pink", hex: "#f472b6" },
+  { name: "Purple", hex: "#9333ea" },
+  { name: "Green", hex: "#16a34a" },
+  { name: "Olive", hex: "#808000" },
+  { name: "Yellow", hex: "#facc15" },
+  { name: "Orange", hex: "#f97316" },
+  { name: "Brown", hex: "#92400e" },
+  { name: "Beige", hex: "#d8c3a5" },
+  { name: "Cream", hex: "#fff1d6" },
+  { name: "Gold", hex: "#d4af37" },
+  { name: "Silver", hex: "#c0c0c0" },
+] as const;
 
 interface FormState {
   name: string;
@@ -55,7 +80,7 @@ function fromProduct(product?: AdminProductDTO | null): FormState {
       discountPrice: "",
       images: [],
       hasVariants: false,
-      options: [{ key: rowKey(), name: "", valuesText: "" }],
+      options: [],
       variants: [],
       stock: "0",
       lowStockThreshold: String(LIMITS.defaultLowStockThreshold),
@@ -75,7 +100,7 @@ function fromProduct(product?: AdminProductDTO | null): FormState {
     hasVariants: product.variants.length > 0,
     options: product.options.length
       ? product.options.map((o) => ({ key: rowKey(), name: o.name, valuesText: o.values.join(", ") }))
-      : [{ key: rowKey(), name: "", valuesText: "" }],
+      : [],
     variants: product.variants.map((v) => ({
       key: rowKey(),
       id: v.id,
@@ -117,6 +142,10 @@ export function ProductForm({ product, categories }: ProductFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [addedCategories, setAddedCategories] = useState<CategoryDTO[]>([]);
+  const [categoryName, setCategoryName] = useState(product?.category?.name ?? "");
+  const [categoryError, setCategoryError] = useState("");
+  const availableCategories = [...categories, ...addedCategories.filter((added) => !categories.some((category) => category.id === added.id))];
 
   useEffect(() => {
     if (!dirty) return;
@@ -132,8 +161,22 @@ export function ProductForm({ product, categories }: ProductFormProps) {
   };
 
   const setOptions = (options: OptionRow[]) => {
-    setForm((f) => ({ ...f, options, variants: syncVariants(options, f.variants) }));
+    setForm((f) => {
+      const variants = syncVariants(options, f.variants);
+      if (!f.hasVariants && variants.length === 1) variants[0]!.stock = f.stock;
+      const stock = !options.length && f.hasVariants ? String(f.variants.filter((variant) => variant.isActive).reduce((sum, variant) => sum + (Number(variant.stock) || 0), 0)) : f.stock;
+      return { ...f, options, variants, hasVariants: options.length > 0, stock };
+    });
     setDirty(true);
+    setErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !/^(options|variants|stock)/.test(key))));
+  };
+
+  const setOptionValues = (matches: (option: OptionRow) => boolean, name: string, valuesText: string) => {
+    const option = form.options.find(matches);
+    if (!valuesText.trim()) setOptions(form.options.filter((item) => item !== option));
+    else if (option) setOptions(form.options.map((item) => item === option ? { ...item, valuesText } : item));
+    else if (form.options.length >= LIMITS.maxProductOptions) toast.error("Remove another option before adding this one.");
+    else setOptions([...form.options, { key: rowKey(), name, valuesText }]);
   };
 
   const updateVariant = (key: string, patch: Partial<VariantRow>) => {
@@ -141,7 +184,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     setDirty(true);
   };
 
-  function buildPayload(): { payload?: unknown; errors?: Record<string, string> } {
+  function buildPayload(category: string): { payload?: ProductInput; errors?: Record<string, string> } {
     const errs: Record<string, string> = {};
     const regular = parseCedisToPesewas(form.regularPrice);
     const discount = form.discountPrice.trim() ? parseCedisToPesewas(form.discountPrice) : null;
@@ -162,20 +205,19 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     if (!form.hasVariants && (!Number.isInteger(stock) || stock < 0)) errs.stock = "Enter a whole number, 0 or more";
     const threshold = Number(form.lowStockThreshold);
     if (!Number.isInteger(threshold) || threshold < 0) errs.lowStockThreshold = "Enter a whole number";
-    if (!form.category) errs.category = "Choose a category";
     if (Object.keys(errs).length) return { errors: errs };
 
     const payload = {
       name: form.name,
       slug: form.slug.trim() ? slugify(form.slug) : undefined,
       description: form.description,
-      category: form.category,
+      category,
       subCategory: form.subCategory,
       price: discount ?? regular!,
       compareAtPrice: discount !== null ? regular : null,
       images: form.images,
       options: form.hasVariants
-        ? form.options.map((o) => ({ name: o.name.trim(), values: parseValues(o.valuesText) })).filter((o) => o.name || o.values.length)
+        ? form.options.map((o) => ({ name: o.name.trim(), values: parseValues(o.valuesText) }))
         : [],
       variants,
       stock: form.hasVariants ? 0 : stock,
@@ -186,20 +228,42 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
     const check = productInputSchema.safeParse(payload);
     if (!check.success) return { errors: mapErrors(flattenIssues(check.error.issues), discount !== null) };
-    return { payload };
+    return { payload: check.data };
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const { payload, errors: clientErrors } = buildPayload();
+    if (saving) return;
+    const categoryCheck = categoryInputSchema.safeParse({ name: categoryName });
+    if (!categoryCheck.success) {
+      setCategoryError(flattenIssues(categoryCheck.error.issues).name ?? "Enter a category name.");
+      return;
+    }
+    setCategoryError("");
+    const existingCategory = availableCategories.find((category) => category.name.toLowerCase() === categoryCheck.data.name.toLowerCase());
+    // Validate the full product before creating a new category. Replace the temporary ID before saving.
+    const { payload, errors: clientErrors } = buildPayload(existingCategory?.id ?? "000000000000000000000000");
     if (clientErrors) {
       setErrors(clientErrors);
       toast.error("Please fix the highlighted fields.");
       return;
     }
+    if (!payload) return;
     setErrors({});
     setSaving(true);
     try {
+      let category = existingCategory;
+      if (!category) {
+        try {
+          category = await api.post<CategoryDTO>("/admin/categories", categoryCheck.data);
+        } catch (error) {
+          setCategoryError(error instanceof ApiClientError ? error.message : "Could not save the category. Try again.");
+          return;
+        }
+        const createdCategory = category;
+        setAddedCategories((current) => [...current, createdCategory]);
+      }
+      payload.category = category.id;
       if (product) {
         const saved = await api.patch<AdminProductDTO>(`/admin/products/${product.id}`, payload);
         setForm(fromProduct(saved));
@@ -222,9 +286,14 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     }
   }
 
-  const varietyOption = form.options.find(isVarietyOption);
-  const selectedVarieties = form.hasVariants && varietyOption ? parseValues(varietyOption.valuesText) : [];
-  const varietyChoices = [...PRODUCT_VARIETIES, ...selectedVarieties].filter((value, index, values) => values.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index);
+  const sizeOption = form.options.find(isSize);
+  const colourOption = form.options.find(isColour);
+  const selectedColours = parseValues(colourOption?.valuesText ?? "");
+  const extraOptions = form.options.filter((option) => option !== sizeOption && option !== colourOption);
+  const optionError = (option: OptionRow | undefined) => {
+    const index = option ? form.options.indexOf(option) : -1;
+    return errors[`options.${index}.values`] || errors[`options.${index}.name`];
+  };
   const discountValue = parseCedisToPesewas(form.discountPrice);
   const regularValue = parseCedisToPesewas(form.regularPrice);
   const savings = discountValue !== null && regularValue !== null && regularValue > discountValue ? Math.floor(((regularValue - discountValue) * 100) / regularValue) : null;
@@ -234,7 +303,9 @@ export function ProductForm({ product, categories }: ProductFormProps) {
       <div className="min-w-0 space-y-6">
         <Panel title="Details">
           <div className="space-y-4 p-4 sm:p-5">
-            <Input label="Product name" required value={form.name} onChange={(e) => set("name", e.target.value)} error={errors.name} maxLength={120} placeholder="e.g. Aba's Liquid Soap 500ml" />
+            <Input label="Product name" required value={form.name} onChange={(e) => set("name", e.target.value)} error={errors.name} maxLength={120} placeholder="e.g. Blue handbag, Liquid soap or Summer top" />
+            <Input label="Category" required value={categoryName} onChange={(event) => { setCategoryName(event.target.value); setCategoryError(""); setDirty(true); }} maxLength={60} placeholder="e.g. Bags, Kitchenware or Liquid soap" hint="Type any category. We will save it with the product." error={categoryError || errors.category} disabled={saving} />
+            <Textarea label="Description (optional)" value={form.description} onChange={(e) => set("description", e.target.value)} error={errors.description} maxLength={5000} rows={3} hint="Leave blank if no description is needed." />
           </div>
         </Panel>
 
@@ -263,100 +334,51 @@ export function ProductForm({ product, categories }: ProductFormProps) {
           </div>
         </Panel>
 
-        <Panel title="Varieties and stock">
+        <Panel title="Sizes, colours and stock">
           <div className="space-y-5 p-4 sm:p-5">
-            <fieldset>
-              <legend className="text-sm font-semibold text-ink">Variety / scent (optional)</legend>
-              <p className="mt-1 text-xs text-muted">Select the varieties you sell. Each choice has its own stock and appears in the customer&apos;s WhatsApp order.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {varietyChoices.map((value) => {
-                  const checked = selectedVarieties.some((selected) => selected.toLowerCase() === value.toLowerCase());
+            <p className="text-sm text-muted">Not every product needs sizes or colours. Leave these blank if they do not apply.</p>
+            <Input label="Sizes / volumes (optional)" value={sizeOption?.valuesText ?? ""} onChange={(event) => setOptionValues(isSize, "Size", event.target.value)} placeholder="e.g. S, M, L or 500ml, 1L or One size" hint="Type any sizes, separated by commas." error={optionError(sizeOption)} disabled={saving} />
+            <fieldset disabled={saving} className="space-y-3">
+              <legend className="text-sm font-medium text-ink">Colours (optional)</legend>
+              <p className="text-xs text-muted">Tap the colours you sell. Tap a selected colour again to remove it.</p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                {COLOUR_PALETTE.map((colour) => {
+                  const selected = selectedColours.some((value) => value.toLowerCase() === colour.name.toLowerCase());
                   return (
-                    <label key={value} className={cn("flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm", checked ? "border-brand bg-brand-50 font-semibold text-brand" : "border-line text-ink hover:border-brand/40")}>
-                      <input type="checkbox" checked={checked} className="size-4 accent-brand" onChange={() => {
-                        const next = toggleVariety(form.options, form.hasVariants ? form.variants : [], value, form.stock);
-                        if (!next) { toast.error("Remove an existing option before adding varieties."); return; }
-                        setForm((previous) => ({ ...previous, ...next }));
-                        setDirty(true);
-                        setErrors((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => !/^(options|variants|stock)/.test(key))));
-                      }} />
-                      {value}
-                    </label>
+                    <button
+                      key={colour.name}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setOptionValues(isColour, "Colour", (selected ? selectedColours.filter((value) => value.toLowerCase() !== colour.name.toLowerCase()) : [...selectedColours, colour.name]).join(", "))}
+                      className={cn("relative flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50", selected ? "border-brand bg-brand-50 text-brand" : "border-line bg-white text-ink hover:border-brand/50")}
+                    >
+                      <span aria-hidden="true" className="size-7 rounded-full border border-black/15 shadow-sm" style={{ backgroundColor: colour.hex }} />
+                      <span>{colour.name}</span>
+                      {selected && <FiCheck aria-hidden="true" className="absolute right-1.5 top-1.5 size-3.5" />}
+                    </button>
                   );
                 })}
               </div>
+              <Input label="Selected colours" value={colourOption?.valuesText ?? ""} onChange={(event) => setOptionValues(isColour, "Colour", event.target.value)} placeholder="No colours selected" hint="You can also type custom colour names here, separated by commas. Leave blank if colours do not apply." error={optionError(colourOption)} disabled={saving} />
             </fieldset>
-            <details className="rounded-xl border border-line p-3" open={Object.keys(errors).some((key) => key.startsWith("options")) ? true : undefined}>
-              <summary className="cursor-pointer text-sm font-semibold text-brand">Other options, sizes or bottle volumes</summary>
-              <div className="mt-4 space-y-4">
-            <Toggle
-              checked={form.hasVariants}
-              onChange={(checked) => {
-                setForm((f) => ({ ...f, hasVariants: checked, variants: checked ? syncVariants(f.options, f.variants) : f.variants }));
-                setDirty(true);
-              }}
-              label="This product has options"
-              description="For example clothing sizes and colours, or bottle volumes. Stock is tracked for each combination."
-            />
-
-            {form.hasVariants && (
-                <div className="space-y-3">
-                  {form.options.map((option, index) => (
-                    <div key={option.key} className="grid gap-2 rounded-xl border border-line bg-cream/50 p-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-start">
-                      <Input
-                        label={index === 0 ? "Option name" : undefined}
-                        aria-label="Option name"
-                        value={option.name}
-                        placeholder={index === 0 ? "Size" : index === 1 ? "Colour" : "Volume"}
-                        onChange={(e) => setOptions(form.options.map((o) => (o.key === option.key ? { ...o, name: e.target.value } : o)))}
-                        error={errors[`options.${index}.name`]}
-                        maxLength={30}
-                      />
-                      <Input
-                        label={index === 0 ? "Values (comma separated)" : undefined}
-                        aria-label="Option values"
-                        value={option.valuesText}
-                        placeholder={index === 0 ? "S, M, L, XL" : index === 1 ? "Black, White" : "250ml, 500ml"}
-                        onChange={(e) => setOptions(form.options.map((o) => (o.key === option.key ? { ...o, valuesText: e.target.value } : o)))}
-                        error={errors[`options.${index}.values`]}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setOptions(form.options.filter((o) => o.key !== option.key))}
-                        disabled={form.options.length === 1}
-                        className={cn("inline-flex h-11 items-center justify-center rounded-xl px-3 text-muted hover:bg-danger-50 hover:text-danger disabled:opacity-30", index === 0 && "sm:mt-7")}
-                        aria-label="Remove option"
-                      >
-                        <FiTrash2 className="size-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {form.options.length < LIMITS.maxProductOptions && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      leftIcon={<FiPlus className="size-4" aria-hidden="true" />}
-                      onClick={() => setOptions([...form.options, { key: rowKey(), name: "", valuesText: "" }])}
-                    >
-                      Add another option
-                    </Button>
-                  )}
-                  {(errors.options || errors.variants) && (
-                    <p className="text-xs font-medium text-danger" role="alert">
-                      {errors.options || errors.variants}
-                    </p>
-                  )}
+            {extraOptions.map((option) => {
+              const index = form.options.indexOf(option);
+              return (
+                <div key={option.key} className="grid gap-3 rounded-xl border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto] sm:items-start">
+                  <Input label="Other option" value={option.name} placeholder="e.g. Scent, Material or Pack" maxLength={30} onChange={(event) => setOptions(form.options.map((item) => item === option ? { ...item, name: event.target.value } : item))} error={errors[`options.${index}.name`]} disabled={saving} />
+                  <Input label="Choices" value={option.valuesText} placeholder="e.g. Lemon, Lavender" hint="Separate choices with commas." onChange={(event) => setOptions(form.options.map((item) => item === option ? { ...item, valuesText: event.target.value } : item))} error={errors[`options.${index}.values`]} disabled={saving} />
+                  <Button variant="ghost" size="icon" className="sm:mt-7" aria-label={`Remove ${option.name || "option"}`} onClick={() => setOptions(form.options.filter((item) => item !== option))} disabled={saving}><FiTrash2 aria-hidden="true" /></Button>
                 </div>
-
-            )}
-              </div>
-            </details>
-
+              );
+            })}
+            {form.options.length < LIMITS.maxProductOptions && <Button variant="secondary" size="sm" leftIcon={<FiPlus aria-hidden="true" />} onClick={() => setOptions([...form.options, { key: rowKey(), name: "", valuesText: "" }])} disabled={saving}>Add another option</Button>}
+            {(errors.options || errors.variants) && <p className="text-xs font-medium text-danger" role="alert">{errors.options || errors.variants}</p>}
+            {form.hasVariants && form.variants.length > 0 && <p className="text-xs text-muted">Enter stock for each choice below. Leave its price blank to use the main product price.</p>}
             {!form.hasVariants && <Input label="Stock quantity" required inputMode="numeric" value={form.stock} onChange={(e) => set("stock", e.target.value)} error={errors.stock} />}
                 {form.hasVariants && form.variants.length > 0 && (
                   <div className="overflow-hidden rounded-xl border border-line">
                     <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto] gap-3 bg-cream/70 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted md:grid">
-                      <span>Variety / option</span>
+                      <span>Size / colour / option</span>
                       <span>Price (optional)</span>
                       <span>Stock</span>
                       <span className="w-16 text-right">Available</span>
@@ -408,43 +430,20 @@ export function ProductForm({ product, categories }: ProductFormProps) {
       </div>
 
       <div className="space-y-6">
-        <Panel title="Organisation">
-          <div className="space-y-4 p-4 sm:p-5">
-            <Select
-              label="Category"
-              required
-              value={form.category}
-              onChange={(e) => set("category", e.target.value)}
-              error={errors.category}
-              placeholder="Choose a category"
-              options={categories.map((c) => ({ value: c.id, label: c.isActive ? c.name : `${c.name} (hidden)` }))}
-            />
-            {categories.length === 0 && (
-              <p className="text-xs text-muted">
-                No categories yet.{" "}
-                <Link href="/admin/categories" className="font-semibold text-brand hover:underline">
-                  Create one first
-                </Link>
-                .
-              </p>
-            )}
-          </div>
-        </Panel>
-
         <Panel title="Product photos">
           <div className="p-4 sm:p-5">
             <ImageListUploader value={form.images} onChange={(images) => set("images", images)} folder="products" max={LIMITS.maxProductImages} error={errors.images} />
           </div>
         </Panel>
 
-        <details className="rounded-2xl border border-line bg-white p-4 sm:p-5" open={errors.lowStockThreshold ? true : undefined}>
-          <summary className="cursor-pointer text-sm font-semibold text-brand">More product settings</summary>
+        <div className="rounded-2xl border border-line bg-white p-4 sm:p-5">
+          <h3 className="text-sm font-semibold text-brand">More product settings</h3>
           <div className="mt-4 space-y-4">
             <Input label="Low-stock alert at" inputMode="numeric" value={form.lowStockThreshold} onChange={(e) => set("lowStockThreshold", e.target.value)} error={errors.lowStockThreshold} />
             <Toggle checked={form.isActive} onChange={(v) => set("isActive", v)} label="Show in store" description="Hidden products can't be viewed or ordered." />
             <Toggle checked={form.isFeatured} onChange={(v) => set("isFeatured", v)} label="Feature on homepage" description="Appears in the Featured products section." />
           </div>
-        </details>
+        </div>
 
         <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] flex gap-2 rounded-2xl border border-line bg-white p-3 shadow-pop xl:static xl:shadow-none">
           <Button type="button" variant="secondary" className="flex-1" onClick={() => router.push("/admin/products")} disabled={saving}>

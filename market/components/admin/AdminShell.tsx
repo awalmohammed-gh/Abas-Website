@@ -9,6 +9,7 @@ import { AdminSidebar } from "./AdminSidebar";
 import { useAdminResource } from "@/hooks/useAdminResource";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { onStoreEvent } from "@/lib/storeChannel";
+import { cn } from "@/lib/utils";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -27,6 +28,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
   // Show a newly uploaded logo or store name as soon as settings are saved in any tab.
   useEffect(() => onStoreEvent((event) => { if (event.type === "settings") reload(); }), [reload]);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const menuRef = useRef<HTMLDialogElement>(null);
   useScrollLock(menuOpen);
 
@@ -51,8 +53,8 @@ function AdminFrame({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="flex min-h-dvh min-w-0 bg-cream">
-        <aside className="fixed inset-y-0 left-0 hidden w-64 lg:block">
-          <AdminSidebar storeName={storeName} logo={logo} />
+        <aside className={cn("fixed inset-y-3 left-3 z-40 hidden overflow-hidden rounded-2xl border border-brand-deep/10 shadow-card motion-safe:transition-[width] motion-safe:duration-200 lg:block", sidebarCollapsed ? "w-20" : "w-64")}>
+          <AdminSidebar storeName={storeName} logo={logo} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)} />
         </aside>
 
           <dialog
@@ -61,7 +63,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
             aria-label="Admin menu"
             onCancel={(event) => { event.preventDefault(); setMenuOpen(false); }}
             onClick={(event) => { if (event.target === menuRef.current) setMenuOpen(false); }}
-            className="mobile-menu fixed inset-x-0 top-0 bottom-auto z-50 m-0 h-[min(100dvh,40rem)] max-h-dvh w-full max-w-none border-0 bg-transparent p-0"
+            className="mobile-menu admin-menu fixed inset-y-0 left-0 right-auto z-50 m-0 h-dvh max-h-dvh w-[min(20rem,calc(100vw-1.5rem))] max-w-none overflow-hidden rounded-r-2xl border-0 bg-transparent p-0"
           >
             <div className="relative h-full min-h-0 min-w-0 shadow-pop">
               <AdminSidebar onNavigate={() => setMenuOpen(false)} storeName={storeName} logo={logo} />
@@ -69,7 +71,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
                 type="button"
                 autoFocus
                 onClick={() => setMenuOpen(false)}
-                className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(0.625rem+env(safe-area-inset-top))] inline-flex size-11 items-center justify-center rounded-xl text-cream hover:bg-white/10"
+                className="absolute right-3 top-[calc(1.625rem+env(safe-area-inset-top))] inline-flex size-11 items-center justify-center rounded-xl text-cream hover:bg-white/10 focus-visible:outline-white"
                 aria-label="Close admin menu"
               >
                 <FiX className="size-5" />
@@ -77,7 +79,7 @@ function AdminFrame({ children }: { children: ReactNode }) {
             </div>
           </dialog>
 
-        <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
+        <div className={cn("flex min-w-0 flex-1 flex-col motion-safe:transition-[padding-left] motion-safe:duration-200", sidebarCollapsed ? "lg:pl-[6.5rem]" : "lg:pl-[17.5rem]")}>
           <AdminHeader onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
           <main className="min-w-0 flex-1 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:pt-8 lg:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pl-[max(2rem,env(safe-area-inset-left))] lg:pr-[max(2rem,env(safe-area-inset-right))]">{children}</main>
         </div>
