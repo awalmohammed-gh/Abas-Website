@@ -1,5 +1,6 @@
 import { getCategories, getSettings } from "@/lib/catalog";
 import { PushPrompt } from "@/components/notifications/PushPrompt";
+import { storefrontCategories } from "@/lib/storefrontCategories";
 import { Navbar } from "./Navbar";
 
 /** Server wrapper: loads settings and categories, then renders the interactive navbar. */
@@ -18,7 +19,7 @@ export async function SiteHeader() {
         whatsappNumber={settings.whatsappNumber}
         supportMessage={settings.whatsappSupportMessage}
         supportPhone={settings.supportPhone}
-        categories={(categories ?? []).map((c) => ({ name: c.name, slug: c.slug, count: c.productCount ?? 0 }))}
+        categories={storefrontCategories(categories).map((c) => ({ name: c.name, slug: c.slug, count: c.productCount ?? 0 }))}
         notificationsEnabled={settings.notifications.enabled}
       />
       {settings.notifications.enabled && <PushPrompt storeName={settings.storeName} />}

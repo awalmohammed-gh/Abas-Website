@@ -8,6 +8,7 @@ import { Logo } from "@/components/brand/Logo";
 import { getCategories, getSettings } from "@/lib/catalog";
 import { supportChatUrl } from "@/lib/whatsapp";
 import { STORE_TIME_ZONE } from "@/lib/time";
+import { storefrontCategories } from "@/lib/storefrontCategories";
 
 async function copyrightYear() {
   "use cache";
@@ -63,7 +64,7 @@ export async function Footer() {
                 All products
               </Link>
             </li>
-            {(categories ?? []).slice(0, 6).map((category) => (
+            {storefrontCategories(categories).map((category) => (
               <li key={category.id}>
                 <Link href={`/categories/${category.slug}`} className="hover:text-accent">
                   {category.name}

@@ -12,6 +12,7 @@ import { InstallPwaButton } from "@/components/ui/InstallPwaButton";
 import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 import { whatsappChatUrl } from "@/lib/whatsapp";
+import { STOREFRONT_CATEGORY_LIMIT } from "@/lib/storefrontCategories";
 
 export interface NavCategory { name: string; slug: string; count: number }
 interface NavbarProps {
@@ -65,7 +66,7 @@ export function Navbar({ storeName, logo, whatsappNumber, supportMessage, catego
             <ul className="flex w-max items-center gap-1 py-1.5 text-xs sm:text-sm">
               <li><Link href="/shop" aria-current={pathname === "/shop" ? "page" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand-50 px-3 font-semibold text-brand"><FiGrid className="size-4" aria-hidden="true" />All products</Link></li>
               <li><Link href="/shop?sort=newest" className="inline-flex min-h-10 items-center whitespace-nowrap rounded-lg px-3 font-medium text-ink hover:bg-cream">New arrivals</Link></li>
-              {categories.filter((category) => category.count > 0).map((category) => <li key={category.slug}><Link href={`/categories/${category.slug}`} aria-current={pathname === `/categories/${category.slug}` ? "page" : undefined} className={cn("inline-flex min-h-10 items-center whitespace-nowrap rounded-lg px-3 font-medium hover:bg-cream", pathname === `/categories/${category.slug}` ? "bg-brand-50 text-brand" : "text-muted")}>{category.name}</Link></li>)}
+              {categories.slice(0, STOREFRONT_CATEGORY_LIMIT).map((category) => <li key={category.slug}><Link href={`/categories/${category.slug}`} aria-current={pathname === `/categories/${category.slug}` ? "page" : undefined} className={cn("inline-flex min-h-10 items-center whitespace-nowrap rounded-lg px-3 font-medium hover:bg-cream", pathname === `/categories/${category.slug}` ? "bg-brand-50 text-brand" : "text-muted")}>{category.name}</Link></li>)}
             </ul>
           </nav>
           {chatUrl && <a href={chatUrl} target="_blank" rel="noopener noreferrer" className="hidden min-h-10 shrink-0 items-center gap-2 whitespace-nowrap text-xs font-semibold text-whatsapp lg:inline-flex"><FaWhatsapp className="size-4" aria-hidden="true" />Need a hand?<span className="sr-only"> Chat on WhatsApp, opens in a new tab</span></a>}

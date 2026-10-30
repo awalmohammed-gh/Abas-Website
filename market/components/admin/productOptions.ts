@@ -2,8 +2,6 @@ import { LIMITS, type VariantAttribute } from "@aba-mart/shared";
 
 export const PRODUCT_VARIETIES = ["Lemon", "Orange", "Sunflower", "Rose", "Lavender", "Coconut", "Aloe Vera", "Mint", "Jasmine", "Apple"] as const;
 export const LIQUID_SOAP_VOLUMES = ["250ml", "500ml", "1L", "2L", "5L", "10L", "25L"] as const;
-export const LIQUID_SOAP_CATEGORIES = ["Liquid Soaps", "Dishwashing Liquid", "Liquid Hand Wash", "Laundry Liquid", "Multipurpose Liquid Soap"] as const;
-export const CLOTHING_CATEGORIES = ["Jeans Short", "Jeans Trouser", "Beggy Jeans", "T-shirt", "Summer Top", "Lacoste"] as const;
 
 export interface OptionRow { key: string; name: string; valuesText: string }
 export interface VariantRow {
