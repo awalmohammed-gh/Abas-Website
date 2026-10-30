@@ -22,7 +22,7 @@ async function ProductSection({ id, eyebrow, title, description, href, query, hi
   if (result && result.items.length === 0 && hideWhenEmpty) return null;
 
   return (
-    <section className={tone === "tinted" ? "bg-white py-14 sm:py-16" : "py-14 sm:py-16"} aria-labelledby={id}>
+    <section className={tone === "tinted" ? "bg-white/60 py-7 sm:py-10" : "py-7 sm:py-10"} aria-labelledby={id}>
       <div className="container-page">
         <SectionHeading id={id} eyebrow={eyebrow} title={title} description={description} href={result?.items.length ? href : undefined} />
         {result === null ? (
@@ -31,12 +31,13 @@ async function ProductSection({ id, eyebrow, title, description, href, query, hi
           <StaggerContainer items=":scope > ul > li">
             <ProductGrid
               products={result.items}
-            empty={
-              <EmptyState
-                icon={<FiPackage />}
-                title="New stock is on the way"
-                description="We're adding products to the store. In the meantime, message us on WhatsApp and we'll help you find what you need."
-              />
+              className="gap-y-4 sm:gap-y-5 xl:grid-cols-5"
+              empty={
+                <EmptyState
+                  icon={<FiPackage />}
+                  title="New stock is on the way"
+                  description="We're adding products to the store. In the meantime, message us on WhatsApp and we'll help you find what you need."
+                />
               }
             />
           </StaggerContainer>
@@ -53,9 +54,9 @@ export async function FeaturedProducts() {
   return (
     <ProductSection
       id="featured-heading"
-      eyebrow="Handpicked"
-      title="Featured products"
-      description="Customer favourites and essentials we always keep in stock."
+      eyebrow="Worth a look"
+      title="Picked for your everyday"
+      description="Explore a selection from across the store."
       href="/shop"
       query={{ featured: true, limit: 8 }}
       hideWhenEmpty
@@ -68,12 +69,12 @@ export async function FeaturedProducts() {
 export async function NewArrivals() {
   const { storefront } = await getSettings();
   if (!storefront.showNewArrivals) return null;
-  return <ProductSection id="new-heading" eyebrow="Just in" title="New arrivals" href="/shop" query={{ sort: "newest", limit: 8 }} />;
+  return <ProductSection id="new-heading" eyebrow="Fresh on the shelves" title="Discover your next find" description="The latest additions, ready to explore." href="/shop?sort=newest" query={{ sort: "newest", limit: 10 }} />;
 }
 
 export function SectionSkeleton() {
   return (
-    <div className="container-page py-14 sm:py-16" aria-hidden="true">
+    <div className="container-page py-7 sm:py-10" aria-hidden="true">
       <div className="skeleton mb-8 h-8 w-56" />
       <ProductGridSkeleton count={4} />
     </div>

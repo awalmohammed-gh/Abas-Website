@@ -7,10 +7,11 @@ interface ProductImageProps {
   sizes: string;
   priority?: boolean;
   className?: string;
+  fit?: "cover" | "contain";
 }
 
 /** Fills its (relatively positioned, fixed-ratio) parent. Falls back to a branded placeholder. */
-export function ProductImage({ src, alt, sizes, priority, className }: ProductImageProps) {
+export function ProductImage({ src, alt, sizes, priority, className, fit = "cover" }: ProductImageProps) {
   return (
     <Image
       src={src || "/images/placeholders/product.svg"}
@@ -18,7 +19,7 @@ export function ProductImage({ src, alt, sizes, priority, className }: ProductIm
       fill
       sizes={sizes}
       priority={priority}
-      className={cn("object-cover", !src && "object-contain", className)}
+      className={cn(fit === "contain" || !src ? "object-contain" : "object-cover", className)}
     />
   );
 }

@@ -19,13 +19,13 @@ export function SectionHeading({
   id?: string;
 }) {
   return (
-    <RevealOnScroll className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8">
+    <RevealOnScroll className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="max-w-2xl">
         {eyebrow && <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">{eyebrow}</p>}
-        <h2 id={id} className="text-2xl font-bold text-ink sm:text-3xl">
+        <h2 id={id} className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
           {title}
         </h2>
-        {description && <p className="mt-2 text-[15px] text-muted">{description}</p>}
+        {description && <p className="mt-1.5 text-sm text-muted">{description}</p>}
       </div>
       {href && (
         <Link href={href} className="group inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">

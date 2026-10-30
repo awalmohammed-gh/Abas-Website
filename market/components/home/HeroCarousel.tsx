@@ -4,7 +4,7 @@ import { getImageProps } from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useAnimate } from "motion/react-mini";
-import { FiArrowRight, FiCheckCircle, FiChevronLeft, FiChevronRight, FiShoppingBag } from "react-icons/fi";
+import { FiArrowRight, FiChevronLeft, FiChevronRight, FiPause, FiPlay, FiShoppingBag } from "react-icons/fi";
 import type { BannerDTO } from "@aba-mart/shared";
 import { usePrefersReducedMotion } from "@/components/animations/usePrefersReducedMotion";
 import { EASE_OUT } from "@/components/animations/tokens";
@@ -53,6 +53,7 @@ const rise = (active: boolean, delayMs: number): { className?: string; style?: C
 
 export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
   const count = banners.length;
+  const [paused, setPaused] = useState(false);
   // `seen` slides keep their image mounted; the others don't download theirs until needed.
   const [{ index, seen, direction, transitioning }, setState] = useState({ index: 0, seen: [0], direction: 1, transitioning: false });
   const previousIndex = useRef(0);
@@ -131,7 +132,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
   // Automatically advance every eight seconds, including after hover or touch.
   // Background tabs and reduced-motion preferences still suspend rotation.
   useEffect(() => {
-    if (count < 2 || reduceMotion || !pageVisible) return;
+    if (count < 2 || reduceMotion || !pageVisible || paused) return;
     const timer = window.setTimeout(() => {
       setState((s) => {
         const i = (s.index + 1) % count;
@@ -139,7 +140,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
       });
     }, INTERVAL);
     return () => window.clearTimeout(timer);
-  }, [index, count, reduceMotion, pageVisible]);
+  }, [index, count, reduceMotion, pageVisible, paused]);
 
   // After the page has finished loading, fetch the next slide's image in the background.
   const nextIndex = (index + 1) % count;
@@ -149,7 +150,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
     <section
       aria-roledescription="carousel"
       aria-label="Featured promotions"
-      className="relative h-[100vh] overflow-hidden bg-brand-deep"
+      className="relative h-[380px] overflow-hidden bg-brand-deep sm:h-[360px] lg:h-[376px]"
     >
       {/* Reserve space for the photo and readable overlay at every screen size. */}
       <div ref={scope} className="relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)]">
@@ -174,55 +175,34 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               )}
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(16,56,45,0.4)_0%,rgba(16,56,45,0.8)_50%,rgba(16,56,45,0.65)_100%)]" aria-hidden="true" />
               <div className="container-page absolute inset-0 overflow-y-auto">
-                <div className="flex min-h-full items-center justify-center py-24">
+                <div className="flex min-h-full items-center justify-center pt-7 pb-20">
                 <div className="w-full min-w-0 max-w-3xl text-center text-cream">
                   {banner.eyebrow && (
-                    <p style={rise(active, 0).style} className={cn("mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream backdrop-blur-sm sm:text-xs", rise(active, 0).className)}>
+                    <p style={rise(active, 0).style} className={cn("mx-auto mb-3 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-cream backdrop-blur-sm sm:text-xs", rise(active, 0).className)}>
                       <FiShoppingBag className="size-3.5 text-accent" aria-hidden="true" />
                       {banner.eyebrow}
                     </p>
                   )}
                   {i === 0 ? (
-                    <h1 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl", rise(active, 60).className)}>
+                    <h1 style={rise(active, 60).style} className={cn("text-3xl font-bold leading-[1.1] tracking-tight text-balance sm:text-4xl lg:text-5xl", rise(active, 60).className)}>
                       {banner.title}
                     </h1>
                   ) : (
-                    <h2 style={rise(active, 60).style} className={cn("text-4xl font-bold leading-[1.05] tracking-tight text-balance sm:text-6xl lg:text-7xl", rise(active, 60).className)}>
+                    <h2 style={rise(active, 60).style} className={cn("text-3xl font-bold leading-[1.1] tracking-tight text-balance sm:text-4xl lg:text-5xl", rise(active, 60).className)}>
                       {banner.title}
                     </h2>
                   )}
-                  {banner.description && (
-                    <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-pretty text-cream/85 sm:text-base lg:text-lg">
-                      <span className="sr-only">{banner.description}</span>
-                      <span aria-hidden="true">
-                        {banner.description.trim().split(/\s+/).map((word, wordIndex) => (
-                          <span key={wordIndex}>
-                            <span
-                              className={cn("inline-block", active && "motion-safe:animate-hero-word")}
-                              style={active ? { animationDelay: `${240 + Math.min(wordIndex * 22, 1400)}ms` } : undefined}
-                            >
-                              {word}
-                            </span>{" "}
-                          </span>
-                        ))}
-                      </span>
-                    </p>
-                  )}
+                  {banner.description && <p className="mx-auto mt-3 line-clamp-3 max-w-lg text-center text-xs leading-relaxed text-cream/85 sm:text-sm">{banner.description}</p>}
                   {banner.buttonText && banner.buttonLink && (
-                    <div style={rise(active, 220).style} className={cn("mt-7 flex flex-wrap items-center justify-center gap-3", rise(active, 220).className)}>
+                    <div style={rise(active, 220).style} className={cn("mt-4 flex flex-wrap items-center justify-center gap-3", rise(active, 220).className)}>
                       <Link href={banner.buttonLink} tabIndex={active ? 0 : -1} className={buttonClasses("hero", "lg", "group min-w-44 shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white")}>
                         {banner.buttonText}
                         <FiArrowRight className="size-5 transition-transform duration-200 ease-out-soft group-hover:translate-x-0.5" aria-hidden="true" />
                       </Link>
-                      <Link href="/products" tabIndex={active ? 0 : -1} className={buttonClasses("secondary", "lg", "min-w-44 shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white")}>
-                        Explore all products
-                      </Link>
+
                     </div>
                   )}
-                  <div style={rise(active, 300).style} className={cn("mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-cream/75 sm:text-sm", rise(active, 300).className)}>
-                    <span className="inline-flex items-center gap-1.5"><FiCheckCircle className="size-4 text-accent" aria-hidden="true" /> Order on WhatsApp</span>
-                    <span className="inline-flex items-center gap-1.5"><FiCheckCircle className="size-4 text-accent" aria-hidden="true" /> No account needed</span>
-                  </div>
+
                 </div>
                 </div>
               </div>
@@ -240,6 +220,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               </button>
             ))}
           </div>
+          <button type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? "Play promotions" : "Pause promotions"} aria-pressed={paused} className="flex size-11 shrink-0 items-center justify-center rounded-full text-white hover:bg-white/15">{paused ? <FiPlay className="size-4" aria-hidden="true" /> : <FiPause className="size-4" aria-hidden="true" />}</button>
           <span className="mr-1 shrink-0 text-xs tabular-nums text-cream/70" aria-hidden="true">{String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}</span>
           <button
             type="button"

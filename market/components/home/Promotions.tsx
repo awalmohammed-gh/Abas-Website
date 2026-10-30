@@ -13,13 +13,13 @@ export async function Promotions() {
   const best = Math.max(0, ...result.items.filter((product) => product.inStock).map((p) => discountPercent(p.price, p.compareAtPrice) ?? 0));
 
   return (
-    <section className="container-page py-14 sm:py-16" aria-labelledby="deals-heading">
+    <section className="container-page py-7 sm:py-10" aria-labelledby="deals-heading">
       <RevealOnScroll className="overflow-hidden rounded-3xl bg-accent-50 ring-1 ring-accent/30" duration={0.5}>
         <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-center">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Deals</p>
             <h2 id="deals-heading" className="mt-2 text-3xl font-bold text-ink sm:text-4xl">
-              {best > 0 ? `Save up to ${best}% today` : "Special prices this week"}
+              {best > 0 ? `Save up to ${best}% today` : "A few good deals"}
             </h2>
             <p className="mt-3 text-muted">Discounted while stock lasts. Prices are confirmed with you on WhatsApp.</p>
             <Link

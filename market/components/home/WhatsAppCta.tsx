@@ -11,8 +11,8 @@ export async function WhatsAppCta() {
   const chatUrl = supportChatUrl(settings, `Hello ${settings.storeName}, I'm looking for a product. Can you help?`);
 
   return (
-    <section className="container-page py-14 sm:py-16" aria-labelledby="whatsapp-cta-heading">
-      <RevealOnScroll className="relative overflow-hidden rounded-3xl bg-brand px-6 py-10 text-cream sm:px-12 sm:py-14" duration={0.5}>
+    <section className="container-page py-7 sm:py-10" aria-labelledby="whatsapp-cta-heading">
+      <RevealOnScroll className="relative overflow-hidden rounded-2xl bg-brand px-6 py-8 text-cream sm:px-10 sm:py-10" duration={0.5}>
         <FaWhatsapp className="pointer-events-none absolute -right-8 -top-8 size-56 text-white/[0.06]" aria-hidden="true" />
         <div className="relative max-w-2xl">
           <h2 id="whatsapp-cta-heading" className="text-2xl font-bold sm:text-3xl">

@@ -8,14 +8,14 @@ import { Promotions } from "@/components/home/Promotions";
 import { WhatsAppCta } from "@/components/home/WhatsAppCta";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/config/site";
-import { getBanners, getSettings } from "@/lib/catalog";
+import { getSettings } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
 export default async function HomePage() {
-  const [settings, banners] = await Promise.all([getSettings(), getBanners()]);
+  const settings = await getSettings();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url;
   const storeName = settings.storeName || siteConfig.name;
   const description = settings.storeDescription || siteConfig.description;
@@ -55,7 +55,7 @@ export default async function HomePage() {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${siteUrl}/products?search={search_term_string}`,
+        urlTemplate: `${siteUrl}/shop?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -65,13 +65,6 @@ export default async function HomePage() {
     <>
       <JsonLd data={[localBusinessSchema, webSiteSchema]} />
 
-      {/* When no hero banners are configured, provide a clear accessible primary heading */}
-      {!banners.length && (
-        <h1 className="sr-only">
-          {storeName} — Everyday Essentials Online Shopping in Ghana
-        </h1>
-      )}
-
       <Suspense fallback={<HeroSkeleton />}>
         <Hero />
       </Suspense>
@@ -79,10 +72,10 @@ export default async function HomePage() {
         <Categories />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <FeaturedProducts />
+        <NewArrivals />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <NewArrivals />
+        <FeaturedProducts />
       </Suspense>
       <Suspense fallback={null}>
         <Promotions />

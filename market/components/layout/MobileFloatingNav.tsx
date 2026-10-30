@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { label: "Home", href: "/", icon: HiOutlineHome, activeIcon: HiHome },
-  { label: "Shop", href: "/products", icon: HiOutlineSquares2X2, activeIcon: HiSquares2X2 },
+  { label: "Shop", href: "/shop", icon: HiOutlineSquares2X2, activeIcon: HiSquares2X2 },
   { label: "Cart", href: "/cart", icon: HiOutlineShoppingCart, activeIcon: HiShoppingCart },
   { label: "My Orders", href: "/my-orders", icon: HiOutlineClipboardDocumentList, activeIcon: HiClipboardDocumentList },
   { label: "Contact", href: "/contact", icon: HiOutlinePhone, activeIcon: HiPhone },
@@ -40,7 +40,7 @@ export function MobileFloatingNav() {
           const active = tab.href === "/"
             ? pathname === "/"
             : pathname === tab.href || pathname.startsWith(`${tab.href}/`)
-              || (tab.href === "/products" && (pathname === "/shop" || pathname.startsWith("/categories/")));
+              || (tab.href === "/shop" && (pathname.startsWith("/products") || pathname.startsWith("/categories/")));
           const Icon = active ? tab.activeIcon : tab.icon;
           const isCart = tab.href === "/cart";
 
