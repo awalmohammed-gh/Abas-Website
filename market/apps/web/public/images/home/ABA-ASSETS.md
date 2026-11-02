@@ -32,4 +32,3 @@ Final prompt: Photorealistic premium marketplace hero product photography, lands
 Saved asset: `aba-liquid-soap-v1.webp`
 
 Final prompt: Photorealistic premium marketplace hero product photography, landscape 3:2. Three realistic clear pump bottles of liquid soap on a low pale blue podium. The front large bottle contains fresh green liquid and has a clean white label with the exact brand name "ABA" in large royal blue letters and the exact smaller text "LIQUID SOAP", small golden yellow accent stripe. The other two bottles have matching ABA labels and contain clear and light amber soap. Fresh green leaves, a neat white hand towel, gentle clean bubbles near the base, pale mint and white studio background, bright friendly commercial product lighting, realistic transparent bottle materials. Labels legible, no other brands, no price text, no UI, no watermark.
-
