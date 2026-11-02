@@ -9,7 +9,7 @@ import { useCart } from "@/hooks/useCart";
 import { cn } from "@/lib/utils";
 import type { CartLine } from "@/types/cart";
 
-export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | null }) {
+export function CartItem({ line, issue, locked = false }: { line: CartLine; issue?: QuoteLine | null; locked?: boolean }) {
   const { setQuantity, removeItem, pending } = useCart();
   const max = Math.min(line.maxQuantity, LIMITS.maxLineQuantity);
   const blocked = issue && issue.status !== "ok" && issue.status !== "quantity_adjusted";
@@ -17,6 +17,7 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
   // the cart state is never held back for the animation. If removal fails it fades back in.
   const [leaving, setLeaving] = useState(false);
   const remove = () => {
+    if (locked || pending) return;
     setLeaving(true);
     removeItem(line.key).catch(() => setLeaving(false));
   };
@@ -24,51 +25,48 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
   return (
     <li
       className={cn(
-        "flex gap-3 py-5 transition-[opacity,translate] duration-200 ease-out-soft sm:gap-4",
+        "checkout-cart-item flex gap-3 py-4 transition-[opacity,translate] duration-200 ease-out-soft sm:gap-4",
         blocked && "opacity-90",
         leaving && "pointer-events-none -translate-x-4 opacity-0",
       )}
     >
-      <Link href={`/products/${line.slug}`} className="relative size-20 shrink-0 overflow-hidden rounded-xl border border-line bg-cream-200 sm:size-24">
-        <ProductImage src={line.image} alt={line.name} sizes="96px" />
+      <Link href={`/products/${line.slug}`} className="checkout-item-image relative size-20 shrink-0 overflow-hidden rounded-xl border border-line bg-cream-200 sm:size-24">
+        <ProductImage src={line.image} alt={line.name} sizes="108px" fit="contain" />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="checkout-item-heading flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
             <Link href={`/products/${line.slug}`} className="line-clamp-2 font-semibold text-ink hover:text-brand">
               {line.name}
             </Link>
             {line.attributes.length > 0 && (
               <p className="mt-0.5 text-sm text-muted">{line.attributes.map((a) => `${a.name}: ${a.value}`).join(" · ")}</p>
             )}
-            <p className="mt-0.5 text-sm text-muted">
-              {formatGHS(line.unitPrice)} each
-              {line.compareAtPrice && <span className="ml-1.5 line-through">{formatGHS(line.compareAtPrice)}</span>}
-            </p>
+
           </div>
-          <p className="shrink-0 font-display font-bold text-ink">{formatGHS(line.unitPrice * line.quantity)}</p>
+          <p className="checkout-item-total font-display font-bold text-ink">{formatGHS(line.unitPrice * line.quantity)}</p>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center rounded-xl border border-line bg-white" role="group" aria-label={`Quantity for ${line.name}`}>
+          <div className="checkout-quantity flex items-center rounded-full border border-line bg-white" role="group" aria-label={`Quantity for ${line.name}`}>
             <button
               type="button"
               onClick={() => void setQuantity(line.key, Math.min(line.quantity - 1, max)).catch(() => undefined)}
-              disabled={pending || line.quantity <= 1 || !!blocked}
-              className="flex size-10 items-center justify-center text-ink disabled:opacity-35"
+              disabled={locked || pending || line.quantity <= 1 || !!blocked}
+              className="flex size-11 items-center justify-center text-brand disabled:opacity-35"
               aria-label="Decrease quantity"
             >
               <FiMinus />
             </button>
-            <span className="w-9 text-center text-sm font-semibold" aria-live="polite">
+            <span className="w-6 text-center text-sm font-semibold" aria-live="polite">
               {line.quantity}
             </span>
             <button
               type="button"
               onClick={() => void setQuantity(line.key, line.quantity + 1).catch(() => undefined)}
-              disabled={pending || line.quantity >= max || !!blocked}
-              className="flex size-10 items-center justify-center text-ink disabled:opacity-35"
+              disabled={locked || pending || line.quantity >= max || !!blocked}
+              className="flex size-11 items-center justify-center text-brand disabled:opacity-35"
               aria-label="Increase quantity"
             >
               <FiPlus />
@@ -77,10 +75,10 @@ export function CartItem({ line, issue }: { line: CartLine; issue?: QuoteLine | 
           <button
             type="button"
             onClick={remove}
-            disabled={pending || leaving}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted hover:bg-danger-50 hover:text-danger"
+            disabled={locked || pending || leaving}
+            aria-label={`Remove ${line.name} from cart`} className="checkout-remove inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-danger-50 hover:text-danger"
           >
-            <FiTrash2 className="size-4" aria-hidden="true" /> Remove
+            <FiTrash2 className="size-[18px]" aria-hidden="true" />
           </button>
         </div>
 

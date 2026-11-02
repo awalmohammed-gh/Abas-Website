@@ -5,7 +5,6 @@ import { Categories, CategoriesSkeleton } from "@/components/home/Categories";
 import { FeaturedProducts, NewArrivals, SectionSkeleton } from "@/components/home/FeaturedProducts";
 import { Hero, HeroSkeleton } from "@/components/home/Hero";
 import { Promotions } from "@/components/home/Promotions";
-import { WhatsAppCta } from "@/components/home/WhatsAppCta";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/config/site";
 import { getSettings } from "@/lib/catalog";
@@ -62,7 +61,7 @@ export default async function HomePage() {
   };
 
   return (
-    <>
+    <div className="mart-home">
       <JsonLd data={[localBusinessSchema, webSiteSchema]} />
 
       <Suspense fallback={<HeroSkeleton />}>
@@ -72,18 +71,13 @@ export default async function HomePage() {
         <Categories />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
-        <NewArrivals />
-      </Suspense>
-      <Suspense fallback={<SectionSkeleton />}>
         <FeaturedProducts />
       </Suspense>
       <Suspense fallback={null}>
         <Promotions />
       </Suspense>
+      <Suspense fallback={<SectionSkeleton />}><NewArrivals /></Suspense>
       <Benefits />
-      <Suspense fallback={null}>
-        <WhatsAppCta />
-      </Suspense>
-    </>
+    </div>
   );
 }

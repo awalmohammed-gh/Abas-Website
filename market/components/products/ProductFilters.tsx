@@ -13,6 +13,7 @@ export interface FilterValues {
   category: string;
   sort: ProductSort;
   availability: "all" | "in-stock";
+  onSale?: boolean;
 }
 
 interface ProductFiltersProps {
@@ -40,6 +41,7 @@ export function ProductFilters({ basePath, values, categoryLabel, total }: Produ
       category: categoryInPath ? undefined : merged.category,
       sort: merged.sort === "newest" ? undefined : merged.sort,
       availability: merged.availability === "in-stock" ? "in-stock" : undefined,
+      onSale: merged.onSale || undefined,
     })}`;
     startTransition(() => router.push(href, { scroll: false }));
   }
@@ -59,15 +61,17 @@ export function ProductFilters({ basePath, values, categoryLabel, total }: Produ
   }, [debouncedSearch]);
 
   const inStockOnly = values.availability === "in-stock";
-  type Chip = { key: "q" | "category" | "stock"; label: string };
+  type Chip = { key: "q" | "category" | "stock" | "sale"; label: string };
   const chips: Chip[] = [];
   if (values.q) chips.push({ key: "q", label: `“${values.q}”` });
   if (categoryLabel && values.category) chips.push({ key: "category", label: categoryLabel });
   if (inStockOnly) chips.push({ key: "stock", label: "In stock" });
+  if (values.onSale) chips.push({ key: "sale", label: "Special offers" });
 
   function removeFilter(key: Chip["key"]) {
     if (key === "q") setQuery("");
     else if (key === "category") navigate({ category: "" });
+    else if (key === "sale") navigate({ onSale: false });
     else navigate({ availability: "all" });
   }
 
@@ -163,7 +167,7 @@ export function ProductFilters({ basePath, values, categoryLabel, total }: Produ
             onClick={() => {
               setSearch("");
               lastPushed.current = "";
-              navigate({ q: "", category: "", availability: "all", sort: "newest" });
+              navigate({ q: "", category: "", availability: "all", sort: "newest", onSale: false });
             }}
             className="text-xs font-semibold text-muted underline-offset-2 hover:text-ink hover:underline"
           >

@@ -28,6 +28,7 @@ yarn-error.log*
 .DS_Store
 *.pem
 .vercel
+.codex/
 
 # Old standalone type definitions (superseded by packages/shared)
 /type/

@@ -1,68 +1,30 @@
 "use client";
 
-import { FaWhatsapp } from "react-icons/fa";
-import { FiInfo } from "react-icons/fi";
-import { formatGHS } from "@aba-mart/shared";
-import { Button } from "@/components/ui/Button";
+import { FiCheck, FiShield, FiShoppingCart } from "react-icons/fi";
+import { formatGHS, type QuoteLine } from "@aba-mart/shared";
+import { ButtonLink } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { useCart } from "@/hooks/useCart";
+import { CartItem } from "./CartItem";
 
 interface CartSummaryProps {
   itemCount: number;
   subtotal: number;
   checking: boolean;
-  blockedReason: string | null;
-  onCheckout: () => void;
+  issues: Map<string, QuoteLine>;
+  locked: boolean;
   onClear: () => void;
 }
 
-export function CartSummary({ itemCount, subtotal, checking, blockedReason, onCheckout, onClear }: CartSummaryProps) {
-  return (
-    <aside className="h-fit space-y-5 rounded-2xl border border-line bg-white p-5 shadow-card sm:p-6 lg:sticky lg:top-24" aria-labelledby="summary-heading">
-      <h2 id="summary-heading" className="text-lg font-semibold text-ink">
-        Order summary
-      </h2>
-      <dl className="space-y-3 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-muted">Items</dt>
-          <dd className="font-medium text-ink">{itemCount}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-muted">Subtotal</dt>
-          <dd className="font-medium text-ink">{formatGHS(subtotal)}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-muted">Delivery</dt>
-          <dd className="text-right text-muted">Confirmed on WhatsApp</dd>
-        </div>
-        <div className="flex items-center justify-between border-t border-line pt-3 text-base">
-          <dt className="font-semibold text-ink">Total</dt>
-          <dd className="flex items-center gap-2 font-display text-xl font-bold text-ink">
-            {checking && <Spinner className="text-muted" label="Checking prices" />}
-            {formatGHS(subtotal)}
-          </dd>
-        </div>
-      </dl>
-
-      <Button
-        variant="whatsapp"
-        size="lg"
-        className="w-full"
-        onClick={onCheckout}
-        disabled={!!blockedReason || itemCount === 0}
-        leftIcon={<FaWhatsapp className="size-5" aria-hidden="true" />}
-      >
-        Order via WhatsApp
-      </Button>
-      {blockedReason && <p className="text-center text-xs font-medium text-danger">{blockedReason}</p>}
-
-      <p className="flex gap-2 rounded-xl bg-cream p-3 text-xs leading-relaxed text-muted">
-        <FiInfo className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
-        No payment is taken on this website. We confirm availability, delivery and payment with you on WhatsApp.
-      </p>
-
-      <button type="button" onClick={onClear} className="w-full text-center text-sm font-medium text-muted hover:text-danger">
-        Clear cart
-      </button>
-    </aside>
-  );
+export function CartSummary({ itemCount, subtotal, checking, issues, locked, onClear }: CartSummaryProps) {
+  const { lines } = useCart();
+  return <aside className="checkout-panel checkout-summary" aria-labelledby="summary-heading">
+    <header className="checkout-panel-header"><FiShoppingCart className="size-8 shrink-0" aria-hidden="true" /><h2 id="summary-heading">Order Summary<span className="sr-only">, {itemCount} items</span></h2></header>
+    <div className="checkout-summary-body">
+      {lines.length ? <ul className="divide-y divide-[#dce2f1]">{lines.map(line => <CartItem key={line.key} line={line} issue={issues.get(line.key)} locked={locked} />)}</ul> : <div className="py-8 text-center"><FiShoppingCart className="mx-auto mb-3 size-10 text-brand/40" aria-hidden="true" /><p className="text-sm font-semibold">Your cart is empty</p><p className="mt-1 text-xs text-muted">Find something you love to get started.</p><ButtonLink href="/shop" size="sm" className="mt-4">Continue shopping</ButtonLink></div>}
+      <dl className="checkout-totals"><div><dt>Subtotal</dt><dd>{formatGHS(subtotal)}</dd></div><div><dt>Shipping</dt><dd className="text-right text-xs font-medium text-muted">Confirmed on WhatsApp</dd></div><div className="checkout-total"><dt>Total</dt><dd aria-live="polite">{checking && <Spinner className="text-brand" label="Updating total" />}{formatGHS(subtotal)}</dd></div></dl>
+      <div className="checkout-confidence"><span className="checkout-shield" aria-hidden="true"><FiShield /><FiCheck /></span><div><h3>Shop with Confidence</h3><p>Secure ordering &middot; Friendly support</p></div></div>
+      {lines.length > 0 && <div className="mt-4 flex items-center justify-between gap-3 text-xs"><ButtonLink href="/shop" variant="link">Continue shopping</ButtonLink><button type="button" disabled={checking || locked} onClick={onClear} className="min-h-11 text-muted hover:text-danger disabled:opacity-50">Clear cart</button></div>}
+    </div>
+  </aside>;
 }

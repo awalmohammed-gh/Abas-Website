@@ -7,7 +7,7 @@ import { SectionHeading } from "./SectionHeading";
 
 interface ProductSectionProps {
   id: string;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
   href: string;
@@ -18,7 +18,8 @@ interface ProductSectionProps {
 }
 
 async function ProductSection({ id, eyebrow, title, description, href, query, hideWhenEmpty = false, tone = "plain" }: ProductSectionProps) {
-  const result = await getProducts(query);
+  const featured = await getProducts(query);
+  const result = query.featured && featured?.items.length === 0 ? await getProducts({ limit: 5 }) : featured;
   if (result && result.items.length === 0 && hideWhenEmpty) return null;
 
   return (
@@ -54,13 +55,9 @@ export async function FeaturedProducts() {
   return (
     <ProductSection
       id="featured-heading"
-      eyebrow="Worth a look"
-      title="Picked for your everyday"
-      description="Explore a selection from across the store."
+      title="Discover Our Featured Products"
       href="/shop"
-      query={{ featured: true, limit: 8 }}
-      hideWhenEmpty
-      tone="tinted"
+      query={{ featured: true, limit: 5 }}
     />
   );
 }
@@ -69,7 +66,20 @@ export async function FeaturedProducts() {
 export async function NewArrivals() {
   const { storefront } = await getSettings();
   if (!storefront.showNewArrivals) return null;
-  return <ProductSection id="new-heading" eyebrow="Fresh on the shelves" title="Discover your next find" description="The latest additions, ready to explore." href="/shop?sort=newest" query={{ sort: "newest", limit: 10 }} />;
+  const [newest, offers] = await Promise.all([getProducts({ sort: "newest", limit: 3 }), getProducts({ onSale: true, limit: 3 })]);
+  return (
+    <section className="container-page py-8 sm:py-10">
+      <div className="mart-discover-grid">
+        <div className="min-w-0"><SectionHeading id="new-heading" title="Fresh Finds Just for You" href="/shop?sort=newest" />
+          {newest ? <ProductGrid products={newest.items} className="!grid-cols-2 sm:!grid-cols-3 !gap-3" empty={<p className="text-sm text-muted">New stock is on the way.</p>} /> : <p className="text-sm text-muted">New arrivals could not be loaded. Please try again shortly.</p>}
+        </div>
+        <div className="mart-offers min-w-0"><SectionHeading title="Special Offers" description="Grab these amazing deals!" href="/shop?onSale=true" />
+          {offers?.items.length ? <ProductGrid products={offers.items} className="!grid-cols-2 sm:!grid-cols-3 !gap-3" /> : <div className="rounded-xl bg-accent-50 p-7"><p className="text-xl font-bold text-brand-deep">Your next great find is waiting.</p><p className="mt-3 text-sm leading-6 text-muted">Explore the collection for everyday value. New offers appear here as they arrive.</p><a href="/shop" className="mt-5 inline-flex min-h-11 items-center font-semibold text-brand">Explore the store &rarr;</a></div>}
+          {offers === null && <p className="mt-3 text-xs text-muted">Offers could not be loaded right now.</p>}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export function SectionSkeleton() {

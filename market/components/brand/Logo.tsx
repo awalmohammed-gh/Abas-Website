@@ -15,7 +15,7 @@ export function BrandMark({ className, admin = false }: { className?: string; in
 interface LogoProps {
   storeName?: string;
   logo?: ImageAsset | null;
-  /** "dark" is for use on deep green backgrounds. */
+  /** "dark" is for use on deep navy backgrounds. */
   tone?: "light" | "dark";
   className?: string;
   showTagline?: boolean;
@@ -29,7 +29,7 @@ interface LogoProps {
 export function Logo({ storeName = "ABA Mart", logo, tone = "light", className, showTagline = false, admin = false }: LogoProps) {
   const tagline = showTagline && (
     <span className={cn("mt-2 text-[10px] font-semibold uppercase tracking-[0.12em]", tone === "dark" ? "text-cream/70" : "text-muted")}>
-      {admin ? "Admin Portal" : "Everyday essentials"}
+      {admin ? "Admin Portal" : "Shop Smart. Live Better."}
     </span>
   );
 

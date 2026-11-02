@@ -1,29 +1,39 @@
 import Image from "next/image";
 import Link from "next/link";
-import { FiArrowRight } from "react-icons/fi";
+import { FiArrowRight, FiDroplet, FiShoppingBag, FiPackage } from "react-icons/fi";
 import { getCategories } from "@/lib/catalog";
 import { storefrontCategories, STOREFRONT_CATEGORY_LIMIT } from "@/lib/storefrontCategories";
 
-const TILE_TONES = ["bg-[#eef3e8]", "bg-[#fff0dc]", "bg-[#eeeaf5]", "bg-[#e7eff5]", "bg-[#f7e9e5]"];
+const TILE_TONES = ["bg-[#e3efff]", "bg-[#fff2cc]", "bg-[#ffe5e9]", "bg-[#e9e4ff]", "bg-[#e0f4eb]", "bg-[#ffeadb]"];
+
+/** Decorative category illustrations; admin-uploaded category photography takes priority. */
+function categoryIllustration(name: string): string | undefined {
+  if (/detergent/i.test(name)) return "/images/home/category-detergent.webp";
+  if (/jeans/i.test(name)) return "/images/home/buggy-jeans-unbranded-v2.webp";
+  if (/short/i.test(name)) return "/images/home/category-shorts.webp";
+  if (/t-shirt/i.test(name)) return "/images/home/tshirt-unbranded-v2.webp";
+  if (/hand.*wash/i.test(name)) return "/images/home/category-hand-wash.webp";
+  if (/dishwash/i.test(name)) return "/images/home/category-dishwashing.webp";
+  if (/soap/i.test(name)) return "/images/home/aba-liquid-soap-v1.webp";
+}
 
 export async function Categories() {
   const categories = await getCategories();
   const visible = storefrontCategories(categories);
   if (!visible.length) return null;
   return (
-    <section className="container-page py-7 sm:py-9" aria-labelledby="categories-heading">
+    <section id="categories" className="container-page py-8 sm:py-10 scroll-mt-40" aria-labelledby="categories-heading">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-        <h2 id="categories-heading" className="text-lg font-bold tracking-tight text-ink sm:text-xl">What are you shopping for?</h2>
-        <Link href="/shop" className="inline-flex min-h-9 items-center gap-2 text-xs font-semibold text-brand hover:underline">Browse all<FiArrowRight className="size-3.5" aria-hidden="true" /></Link>
+        <h2 id="categories-heading" className="text-lg font-bold tracking-tight text-ink sm:text-xl">Shop by Categories</h2>
+        <Link href="/shop" className="inline-flex min-h-9 items-center gap-2 text-xs font-semibold text-brand hover:underline">View all categories<FiArrowRight className="size-3.5" aria-hidden="true" /></Link>
       </div>
-      <ul className="relative -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:grid sm:grid-cols-3 sm:px-0 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {visible.map((category, index) => (
-          <li key={category.id} className="w-24 shrink-0 sm:w-auto"><Link href={`/categories/${category.slug}`} className="group flex h-full flex-col items-center gap-2.5 rounded-xl py-1 text-center">
-            <span className={`relative flex size-20 items-center justify-center overflow-hidden rounded-2xl ${TILE_TONES[index % TILE_TONES.length]} ring-1 ring-black/3 transition-shadow group-hover:ring-brand/30`}>
-              {category.image ? <Image src={category.image.url} alt="" fill sizes="80px" className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none" /> : <span className="font-display text-2xl font-bold text-brand/60" aria-hidden="true">{category.name.slice(0, 2).toUpperCase()}</span>}
+          <li key={category.id} className="min-w-0"><Link href={`/categories/${category.slug}`} className={`mart-category group relative flex h-full flex-col items-center overflow-hidden rounded-xl text-center ${TILE_TONES[index % TILE_TONES.length]}`}>
+            <span className={`relative flex h-32 w-full items-center justify-center overflow-hidden transition-transform group-hover:scale-105`}>
+              {category.image || categoryIllustration(category.name) ? <Image src={category.image?.url || categoryIllustration(category.name)!} alt="" fill sizes="(min-width: 1024px) 190px, 45vw" className="object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none" /> : <span className="text-brand/65" aria-hidden="true">{/soap|wash|detergent|care/i.test(category.name) ? <FiDroplet className="size-16" /> : /fashion|jeans|cloth/i.test(category.name) ? <FiShoppingBag className="size-16" /> : <FiPackage className="size-16" />}</span>}
             </span>
-            <span className="line-clamp-2 text-xs font-medium text-ink group-hover:text-brand">{category.name}</span>
-            <span className="-mt-1.5 text-[10px] text-muted">{category.productCount ?? 0} item{category.productCount === 1 ? "" : "s"}</span>
+            <span className="flex min-h-12 w-full items-center justify-center gap-2 bg-white/35 px-2 py-2 text-sm font-bold text-ink group-hover:text-brand">{category.name}<FiArrowRight className="size-3 shrink-0" aria-hidden="true" /></span>
           </Link></li>
         ))}
       </ul>
@@ -32,5 +42,5 @@ export async function Categories() {
 }
 
 export function CategoriesSkeleton() {
-  return <div className="container-page py-7 sm:py-9" aria-hidden="true"><div className="skeleton mb-5 h-6 w-56" /><div className="grid grid-cols-3 gap-4 lg:grid-cols-6">{Array.from({ length: STOREFRONT_CATEGORY_LIMIT }, (_, i) => <div key={i} className="skeleton mx-auto size-20 rounded-2xl" />)}</div></div>;
+  return <div className="container-page py-7 sm:py-9" aria-hidden="true"><div className="skeleton mb-5 h-6 w-56" /><div className="grid grid-cols-3 gap-4 lg:grid-cols-6">{Array.from({ length: STOREFRONT_CATEGORY_LIMIT }, (_, i) => <div key={i} className="skeleton mx-auto size-24 rounded-2xl" />)}</div></div>;
 }

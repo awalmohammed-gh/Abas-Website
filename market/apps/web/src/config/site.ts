@@ -4,7 +4,7 @@ const stripSlash = (url: string) => url.replace(/\/+$/, "");
 
 export const siteConfig = {
   name: "ABA Mart",
-  tagline: "Everyday essentials, delivered with care",
+  tagline: "Shop Smart. Live Better.",
   description:
     "Shop soaps, shower gels, skincare, clothing, household essentials and more from ABA Mart. Order in minutes on WhatsApp — no account needed.",
   url: stripSlash(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),

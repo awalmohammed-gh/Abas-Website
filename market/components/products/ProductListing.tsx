@@ -23,6 +23,7 @@ export function parseFilters(params: SearchParams): FilterValues & { page: numbe
     category: SLUG_PATTERN.test(category) ? category : "",
     sort: sort && PRODUCT_SORTS.includes(sort) ? sort : "newest",
     availability: firstParam(params.availability) === "in-stock" ? "in-stock" : "all",
+    onSale: firstParam(params.onSale) === "true",
     page: Number.isFinite(page) && page > 0 && page < 10_000 ? page : 1,
   };
 }
@@ -45,6 +46,7 @@ export async function ProductListing({ searchParams, category }: ProductListingP
       category: effectiveCategory || undefined,
       sort: filters.sort,
       availability: filters.availability,
+      onSale: filters.onSale || undefined,
       page: filters.page,
       limit: PAGE_SIZE,
     }),
@@ -57,6 +59,7 @@ export async function ProductListing({ searchParams, category }: ProductListingP
       category: category ? undefined : filters.category,
       sort: filters.sort === "newest" ? undefined : filters.sort,
       availability: filters.availability === "in-stock" ? "in-stock" : undefined,
+      onSale: filters.onSale || undefined,
       page: page > 1 ? page : undefined,
     })}`;
 
@@ -67,9 +70,10 @@ export async function ProductListing({ searchParams, category }: ProductListingP
       category: slug || undefined,
       sort: filters.sort === "newest" ? undefined : filters.sort,
       availability: filters.availability === "in-stock" ? "in-stock" : undefined,
+      onSale: filters.onSale || undefined,
     })}`;
 
-  const hasFilters = !!filters.q || filters.availability === "in-stock" || (!category && !!filters.category);
+  const hasFilters = !!filters.q || filters.onSale || filters.availability === "in-stock" || (!category && !!filters.category);
   const activeCategoryName = category ? undefined : categories?.find((c) => c.slug === filters.category)?.name;
 
   return (

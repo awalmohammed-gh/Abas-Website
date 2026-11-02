@@ -1,17 +1,14 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
-import { FiCheckCircle, FiCopy, FiShoppingBag } from "react-icons/fi";
+import { FiCheckCircle, FiCopy } from "react-icons/fi";
 import { formatGHS, type QuoteLine } from "@aba-mart/shared";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { useCart } from "@/hooks/useCart";
 import { errorMessage } from "@/lib/api";
 import { initiateOrderHandoff } from "@/lib/order-handoff";
 import { cartLineKey } from "@/types/cart";
-import { CartItem } from "./CartItem";
 import { CartSummary } from "./CartSummary";
 import { saveLastOrder, useLastOrder, type LastOrder } from "./lastOrderStore";
 import { WhatsAppCheckout } from "./WhatsAppCheckout";
@@ -85,8 +82,7 @@ function OrderSent({ order }: { order: LastOrder }) {
 export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled: boolean; whatsappNotice?: string | null }) {
   const { lines, hydrated, itemCount, subtotal, clear, applyQuote, quote, pending: checking, error, refresh } = useCart();
   const lastOrder = useLastOrder();
-  const searchParams = useSearchParams();
-  const [checkoutOpen, setCheckoutOpen] = useState(() => searchParams.get("checkout") === "1");
+  const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const issues = useMemo(() => {
@@ -117,11 +113,7 @@ export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled:
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
-        <p>Your cart is private to this browser visit.</p>
-        <ButtonLink href="/my-orders" variant="link">My orders &amp; guest privacy</ButtonLink>
-      </div>
+    <div className="space-y-5">
       {error && <div role="alert" className="rounded-xl bg-danger-50 p-4 text-sm text-danger">{error} <Button variant="link" onClick={() => void refresh()}>Retry</Button></div>}
       {lastOrder && <OrderSent order={lastOrder} />}
 
@@ -131,53 +123,17 @@ export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled:
         </p>
       )}
 
-      {lines.length === 0 ? (
-        !lastOrder && (
-          <EmptyState
-            icon={<FiShoppingBag />}
-            title="Your cart is empty"
-            description="Browse the store and add the items you'd like. You can send the whole order to us on WhatsApp in one go."
-            action={<ButtonLink href="/shop">Start shopping</ButtonLink>}
-          />
-        )
-      ) : (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <section aria-labelledby="cart-items-heading" className="rounded-2xl border border-line bg-white px-4 sm:px-6">
-            <h2 id="cart-items-heading" className="sr-only">
-              Items in your cart
-            </h2>
-            <ul className="divide-y divide-line">
-              {lines.map((line) => (
-                <CartItem key={line.key} line={line} issue={issues.get(line.key)} />
-              ))}
-            </ul>
-          </section>
-          <CartSummary
-            itemCount={itemCount}
-            subtotal={subtotal}
-            checking={checking}
-            blockedReason={blockedReason}
-            onCheckout={() => {
-              setNotice(null);
-              setCheckoutOpen(true);
-            }}
-            onClear={async () => {
-              if (!(await confirm({ title: "Remove all items from your cart?", confirmLabel: "Remove all", tone: "danger" }))) return;
-              void clear().then(() => toast.success("Your cart is now empty."), () => undefined);
-            }}
-          />
-        </div>
-      )}
-
-      <WhatsAppCheckout
-        open={checkoutOpen && lines.length > 0 && !blockedReason}
-        onClose={() => setCheckoutOpen(false)}
-        expectedTotal={subtotal}
-        onCartChanged={(updated, message) => {
-          applyQuote(updated);
-          setNotice(`${message} Please review your cart before sending.`);
-        }}
-      />
+      <div className="checkout-grid">
+        <WhatsAppCheckout blockedReason={blockedReason} checking={checking} expectedTotal={subtotal} onSubmittingChange={setSubmitting} onCartChanged={(updated, message) => { applyQuote(updated); setNotice(message + " Please review your cart before sending."); }} />
+        <CartSummary itemCount={itemCount} subtotal={subtotal} checking={checking} issues={issues} locked={submitting} onClear={async () => {
+          if (submitting || checking || !(await confirm({ title: "Remove all items from your cart?", confirmLabel: "Remove all", tone: "danger" }))) return;
+          void clear().then(() => toast.success("Your cart is now empty."), () => undefined);
+        }} />
+      </div>
+      <div className="checkout-privacy flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
+        <p>Your cart is private to this browser visit.</p>
+        <ButtonLink href="/my-orders" variant="link">My orders &amp; guest privacy</ButtonLink>
+      </div>
     </div>
   );
 }

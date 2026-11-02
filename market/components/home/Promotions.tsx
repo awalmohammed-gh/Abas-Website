@@ -1,43 +1,13 @@
+import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
-import { discountPercent } from "@aba-mart/shared";
-import { RevealOnScroll } from "@/components/animations/RevealOnScroll";
-import { ProductCard } from "@/components/products/ProductCard";
-import { getProducts } from "@/lib/catalog";
+import { ButtonLink } from "@/components/ui/Button";
+import { getBanners } from "@/lib/catalog";
 
-/** Real discounted products only. The section is hidden when nothing is on sale. */
 export async function Promotions() {
-  const result = await getProducts({ onSale: true, limit: 3 });
-  if (!result?.items.length) return null;
-
-  const best = Math.max(0, ...result.items.filter((product) => product.inStock).map((p) => discountPercent(p.price, p.compareAtPrice) ?? 0));
-
-  return (
-    <section className="container-page py-7 sm:py-10" aria-labelledby="deals-heading">
-      <RevealOnScroll className="overflow-hidden rounded-3xl bg-accent-50 ring-1 ring-accent/30" duration={0.5}>
-        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-center">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Deals</p>
-            <h2 id="deals-heading" className="mt-2 text-3xl font-bold text-ink sm:text-4xl">
-              {best > 0 ? `Save up to ${best}% today` : "A few good deals"}
-            </h2>
-            <p className="mt-3 text-muted">Discounted while stock lasts. Prices are confirmed with you on WhatsApp.</p>
-            <Link
-              href="/shop?sort=price-asc"
-              className="group mt-6 inline-flex items-center gap-2 font-semibold text-brand hover:underline"
-            >
-              Shop all products <FiArrowRight className="transition-transform duration-200 ease-out-soft group-hover:translate-x-1" aria-hidden="true" />
-            </Link>
-          </div>
-          <ul className="grid gap-3 sm:grid-cols-3">
-            {result.items.map((product) => (
-              <li key={product.id} className="rounded-2xl bg-white p-3 shadow-card">
-                <ProductCard product={product} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      </RevealOnScroll>
-    </section>
-  );
+  const banners = await getBanners();
+  return <section className="container-page py-3" aria-labelledby="promotion-heading"><div className="mart-promotion">
+    <div className="relative z-10"><h2 id="promotion-heading" className="text-2xl font-extrabold leading-tight sm:text-3xl">Upgrade Your Lifestyle<br /><span className="text-accent">Without Breaking the Bank.</span></h2><p className="mt-2 text-sm font-medium text-white">Discover T-shirts, buggy jeans, shorts and everyday soap essentials.</p><ButtonLink href="/shop?onSale=true" variant="accent" size="sm" className="mt-4" rightIcon={<FiArrowRight aria-hidden="true" />}>Shop Deals</ButtonLink></div>
+    <Link href={banners[0]?.buttonLink || "/shop"} className="mart-promo-art" aria-label={banners[0]?.buttonText || "Explore our latest collections"}><Image src="/images/home/tshirt-unbranded-v2.webp" alt="Plain blue and yellow T-shirts" fill sizes="(min-width: 1024px) 600px, 50vw" className="object-cover" /></Link>
+  </div></section>;
 }

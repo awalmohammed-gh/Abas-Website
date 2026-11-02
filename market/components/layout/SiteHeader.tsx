@@ -8,9 +8,9 @@ export async function SiteHeader() {
   const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
   return (
     <>
-      {settings.announcement && (
-        <div className="bg-brand-deep text-cream">
-          <p className="container-page py-2 text-center text-xs font-medium tracking-wide sm:text-[13px]">{settings.announcement}</p>
+      {(
+        <div className="bg-brand-deep text-white">
+          <p className="container-page py-2 text-center text-xs font-medium tracking-wide sm:text-[13px]">{settings.announcement || "Enjoy amazing deals on your favourite products. Shop today!"}</p>
         </div>
       )}
       <Navbar

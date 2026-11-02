@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import { FiHeadphones, FiShield, FiSmile, FiTruck } from "react-icons/fi";
 import { Suspense } from "react";
 import { CartView } from "@/components/cart/CartView";
 import { getSettings } from "@/lib/catalog";
 import { whatsappOrderingNotice } from "@/lib/whatsapp";
 
 export const metadata: Metadata = {
-  title: "Your cart",
+  title: "Checkout",
   robots: { index: false, follow: false },
   alternates: { canonical: "/cart" },
 };
@@ -18,10 +20,10 @@ async function CartLoader() {
 
 export default function CartPage() {
   return (
-    <div className="container-page py-8 sm:py-12">
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-3xl font-bold text-ink sm:text-4xl">Your cart</h1>
-        <p className="mt-2 text-muted">Review your items, then send your order to us on WhatsApp. No account or online payment needed.</p>
+    <div className="container-page checkout-page">
+      <header className="checkout-hero">
+        <div className="checkout-hero-copy"><h1>Checkout<span aria-hidden="true" className="checkout-spark">&#10022;</span></h1><p>Order via <strong>WhatsApp</strong> &ndash; Quick, Easy and Convenient!</p></div>
+        <div className="checkout-hero-image"><Image src="/images/home/checkout-cart-v1.webp" alt="Blue shopping trolley filled with yellow shopping bags" fill priority sizes="(min-width: 1024px) 620px, 100vw" className="object-cover" /></div>
       </header>
       <Suspense
         fallback={
@@ -33,6 +35,12 @@ export default function CartPage() {
       >
         <CartLoader />
       </Suspense>
+      <section className="checkout-benefits" aria-label="Shopping benefits">{[
+        {icon:FiTruck,title:"Fast Delivery",text:"Delivery arranged with you"},
+        {icon:FiShield,title:"Secure Shopping",text:"Your data is protected"},
+        {icon:FiHeadphones,title:"Reliable Support",text:"We're here to help"},
+        {icon:FiSmile,title:"Great Prices",text:"Shop more, save more"},
+      ].map(({icon:Icon,title,text}) => <div key={title}><Icon aria-hidden="true" /><div><h2>{title}</h2><p>{text}</p></div></div>)}</section>
     </div>
   );
 }
