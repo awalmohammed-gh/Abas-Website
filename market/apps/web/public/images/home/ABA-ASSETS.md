@@ -3,7 +3,7 @@
 
 ## Clothing artwork correction
 
-Edited using built-in imagegen. The current storefront uses these unbranded clothing assets; the ABA liquid soap artwork is unchanged. Earlier branded clothing files are superseded.
+Edited using built-in imagegen. The current storefront uses these unbranded clothing assets; the ABA liquid soap artwork is unchanged. Earlier branded clothing files are superseded; the branded `aba-tshirt-v1` and `aba-buggy-jeans-v1` files were removed, and their prompts below are kept for reference.
 
 ### tshirt-unbranded-v2.webp
 

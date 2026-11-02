@@ -44,7 +44,7 @@ export function Logo({ storeName = "ABA Mart", logo, tone = "light", className, 
           height={logo.height ?? 40}
           sizes="(min-width: 1024px) 168px, 144px"
           className="h-12 w-auto max-w-full object-contain lg:h-14"
-          priority
+          preload
         />
         {tagline}
       </span>
@@ -56,7 +56,7 @@ export function Logo({ storeName = "ABA Mart", logo, tone = "light", className, 
   return (
     <span className={cn("inline-flex shrink-0 flex-col", className)}>
       <span className={cn("relative block", admin ? "h-12 w-[64px] lg:h-14 lg:w-[74px]" : "h-12 w-[72px] lg:h-14 lg:w-[84px]")}>
-        <Image src={defaultSrc} alt={admin ? `${storeName} Admin` : storeName} fill sizes="(min-width: 1024px) 84px, 72px" priority className="object-contain" />
+        <Image src={defaultSrc} alt={admin ? `${storeName} Admin` : storeName} fill sizes="(min-width: 1024px) 84px, 72px" preload className="object-contain" />
       </span>
       {tagline}
     </span>

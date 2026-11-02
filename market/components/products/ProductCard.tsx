@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FiArrowUpRight } from "react-icons/fi";
-import { discountPercent, priceRange, type ProductDTO } from "@aba-mart/shared";
+import { discountPercent, priceRange, resolvePrice, type ProductDTO } from "@aba-mart/shared";
 import { cn } from "@/lib/utils";
 import { AddToCartButton } from "./AddToCartButton";
 import { PriceTag } from "./PriceTag";
@@ -18,6 +18,11 @@ export function ProductCard({ product, priority = false, layout = "grid" }: { pr
   const list = layout === "list";
   const href = `/products/${product.slug}`;
   const hasVariants = product.variants.length > 0;
+  // With a single size there is nothing to choose, so the card adds that size directly.
+  const activeVariants = product.variants.filter((variant) => variant.isActive);
+  const onlyVariant = activeVariants.length === 1 ? activeVariants[0]! : null;
+  const needsChoice = hasVariants && !onlyVariant;
+  const onlyPricing = onlyVariant ? resolvePrice(product, onlyVariant) : null;
   const range = priceRange(product);
   // A product-level discount applies when no variant overrides the price.
   const uniformPrice = product.variants.every((v) => v.price === null);
@@ -71,10 +76,12 @@ export function ProductCard({ product, priority = false, layout = "grid" }: { pr
           </div>
         </div>
         <div className={cn("relative z-10 mt-3", list && "sm:max-w-56")}>
-          {soldOut ? <button type="button" disabled className="min-h-11 w-full rounded-lg bg-brand px-2 py-2 text-xs font-semibold text-white opacity-50">Out of stock</button> : hasVariants ? <Link href={href} aria-label={`Choose options for ${product.name}`} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-700">Choose options<FiArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" /></Link> : <AddToCartButton
+          {soldOut ? <button type="button" disabled className="min-h-11 w-full rounded-lg bg-brand px-2 py-2 text-xs font-semibold text-white opacity-50">Out of stock</button> : needsChoice ? <Link href={href} aria-label={`Choose options for ${product.name}`} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-brand px-2 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-700">Choose options<FiArrowUpRight className="size-3.5 shrink-0" aria-hidden="true" /></Link> : <AddToCartButton
             size="sm"
             className="min-h-11 text-xs"
-            line={{ productId: product.id, variantId: null, slug: product.slug, name: product.name, image: image?.url ?? null, attributes: [], unitPrice: product.price, compareAtPrice: product.compareAtPrice, maxQuantity: product.stock }}
+            line={onlyVariant && onlyPricing
+              ? { productId: product.id, variantId: onlyVariant.id, slug: product.slug, name: product.name, image: image?.url ?? null, attributes: onlyVariant.attributes, unitPrice: onlyPricing.price, compareAtPrice: onlyPricing.compareAtPrice, maxQuantity: onlyVariant.stock }
+              : { productId: product.id, variantId: null, slug: product.slug, name: product.name, image: image?.url ?? null, attributes: [], unitPrice: product.price, compareAtPrice: product.compareAtPrice, maxQuantity: product.stock }}
           />}
         </div>
       </div>

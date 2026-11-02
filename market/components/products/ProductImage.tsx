@@ -18,7 +18,7 @@ export function ProductImage({ src, alt, sizes, priority, className, fit = "cove
       alt={src ? alt : ""}
       fill
       sizes={sizes}
-      priority={priority}
+      preload={priority}
       className={cn(fit === "contain" || !src ? "object-contain" : "object-cover", className)}
     />
   );

@@ -122,8 +122,17 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePwaInstall() {
+const noPrompt = () => false;
+
+/**
+ * The provider hydrates before streamed Suspense content such as the header, and
+ * the browser may report installability in between. Each consumer therefore checks
+ * whether it is itself still hydrating and, if so, sees what the server rendered.
+ */
+export function usePwaInstall(): InstallContextValue {
   const context = useContext(InstallContext);
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, serverSnapshot);
   if (!context) throw new Error("usePwaInstall must be used inside PwaInstallProvider");
-  return context;
+  if (isClient) return context;
+  return { ...context, standalone: false, iosSafari: false, installedApp: null, canPrompt: noPrompt };
 }

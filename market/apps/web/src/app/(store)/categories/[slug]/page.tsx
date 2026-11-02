@@ -104,7 +104,7 @@ async function CategoryContent({ params, searchParams }: PageProps<"/categories/
       <header className="mb-8 flex flex-col gap-5 overflow-hidden rounded-3xl border border-line bg-white sm:flex-row sm:items-center">
         {category.image && (
           <div className="relative aspect-[16/9] w-full shrink-0 sm:aspect-square sm:w-48">
-            <Image src={category.image.url} alt={category.name} fill sizes="(min-width: 640px) 192px, 100vw" className="object-cover" priority />
+            <Image src={category.image.url} alt={category.name} fill sizes="(min-width: 640px) 192px, 100vw" className="object-cover" preload />
           </div>
         )}
         <div className="p-5 sm:p-6">

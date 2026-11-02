@@ -22,10 +22,10 @@ function mount({ children = [], reduced = false, failAnimation = false } = {}) {
   const context = {
     exports: {},
     window: { innerHeight: 800 },
-    IntersectionObserver: class {
-      constructor(callback) { this.callback = callback; this.disconnected = false; observer = this; }
-      observe() {}
-      disconnect() { this.disconnected = true; }
+    // Returning an object from a constructor makes `new` yield it, so the test keeps a handle to the observer.
+    IntersectionObserver: function FakeIntersectionObserver(callback) {
+      observer = { callback, disconnected: false, observe() {}, disconnect() { this.disconnected = true; } };
+      return observer;
     },
     require(name) {
       if (name === "react") return { useEffect: (effect) => { cleanup = effect(); } };

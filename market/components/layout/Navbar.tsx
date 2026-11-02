@@ -15,7 +15,6 @@ import { useWishlistIds } from "@/hooks/useWishlist";
 import { cn } from "@/lib/utils";
 import { whatsappChatUrl } from "@/lib/whatsapp";
 
-export interface NavCategory { name: string; slug: string; count: number }
 interface NavbarProps {
   storeName: string;
   logo: ImageAsset | null;

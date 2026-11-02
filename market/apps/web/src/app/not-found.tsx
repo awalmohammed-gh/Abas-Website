@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BrandMark, Logo } from "@/components/brand/Logo";
 import { getMetadataSettings } from "@/lib/catalog";
 import { ButtonLink } from "@/components/ui/Button";
+
+export const metadata: Metadata = {
+  title: "Page not found",
+  robots: { index: false },
+};
 
 export default async function NotFound() {
   const { storeName, logo } = await getMetadataSettings();

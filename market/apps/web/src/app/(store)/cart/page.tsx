@@ -23,7 +23,7 @@ export default function CartPage() {
     <div className="container-page checkout-page">
       <header className="checkout-hero">
         <div className="checkout-hero-copy"><h1>Checkout<span aria-hidden="true" className="checkout-spark">&#10022;</span></h1><p>Order via <strong>WhatsApp</strong> &ndash; Quick, Easy and Convenient!</p></div>
-        <div className="checkout-hero-image"><Image src="/images/home/checkout-cart-v1.webp" alt="Blue shopping trolley filled with yellow shopping bags" fill priority sizes="(min-width: 1024px) 620px, 100vw" className="object-cover" /></div>
+        <div className="checkout-hero-image"><Image src="/images/home/checkout-cart-v1.webp" alt="Blue shopping trolley filled with yellow shopping bags" fill preload sizes="(min-width: 1024px) 620px, 100vw" className="object-cover" /></div>
       </header>
       <Suspense
         fallback={

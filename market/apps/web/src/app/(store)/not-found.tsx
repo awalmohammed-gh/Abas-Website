@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export default function StoreNotFound() {
   return (
     <div className="container-page py-16">
+      <h1 className="sr-only">Page not found</h1>
       <EmptyState
         icon={<FiSearch />}
         title="We couldn't find that"
