@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { Types } from "mongoose";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,7 +26,7 @@ import { Product } from "../src/models/Product.js";
 import { PushSubscription } from "../src/models/PushSubscription.js";
 import { Settings } from "../src/models/Settings.js";
 import { runPushDeliveriesNow } from "../src/services/pushService.js";
-import { ORIGIN, createTestAdmin, guestVisitor, loginAdmin, resetDatabase, startDatabase, stopDatabase, type AdminAgent } from "./helpers.js";
+import { ORIGIN, createTestAdmin, guestVisitor, loginAdmin, ownedImage, resetDatabase, startDatabase, stopDatabase, type AdminAgent } from "./helpers.js";
 
 const app = createApp();
 type Guest = Awaited<ReturnType<typeof guestVisitor>>;
@@ -273,6 +274,59 @@ describe("web push subscriptions and delivery", () => {
     ]);
     await runPushDeliveriesNow();
     expect(sendNotification).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("new product announcements", () => {
+  const newProductTitles = async () => (await Notification.find({ type: "new_product" }).lean()).map((n) => n.title);
+  const categoryId = async () => (await Category.findOne({ slug: "essentials" }).lean())!._id.toString();
+
+  it("announces a visible new product once, pushing it to app users who allow new-product alerts", async () => {
+    const wantsProducts = await guestVisitor(app);
+    const optedOut = await guestVisitor(app);
+    const wanted = fakeSubscription();
+    await wantsProducts.post("/api/push/subscribe", { subscription: wanted, preferences: { newProducts: true, promotions: false } }).expect(201);
+    await optedOut.post("/api/push/subscribe", { subscription: fakeSubscription(), preferences: { newProducts: false, promotions: false } }).expect(201);
+
+    const image = ownedImage("shea-butter");
+    const created = (await admin.post("/api/admin/products", { name: "Shea Butter", category: await categoryId(), price: 1500, stock: 3, images: [image] }).expect(201)).body.data;
+
+    const feed = (await request(app).get("/api/notifications/public").expect(200)).body.data;
+    expect(feed.items).toHaveLength(1);
+    expect(feed.items[0]).toMatchObject({ title: "New arrival: Shea Butter", type: "new_product", targetUrl: `/products/${created.slug}` });
+    expect(feed.items[0].message).toContain("GHS 15.00");
+
+    await runPushDeliveriesNow();
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect((sendNotification.mock.calls[0]![0] as { endpoint: string }).endpoint).toBe(wanted.endpoint);
+    expect(JSON.parse(sendNotification.mock.calls[0]![1] as string)).toMatchObject({ title: "New arrival: Shea Butter", url: `/products/${created.slug}`, image: image.url });
+
+    // Later edits to the same product never announce it again.
+    await admin.patch(`/api/admin/products/${created.id}`, { price: 1400 }).expect(200);
+    expect(await newProductTitles()).toEqual(["New arrival: Shea Butter"]);
+  });
+
+  it("announces a product saved as hidden when it is first shown, and only once", async () => {
+    const created = (await admin.post("/api/admin/products", { name: "Bath Towel", category: await categoryId(), price: 3000, stock: 5, isActive: false }).expect(201)).body.data;
+    expect(await newProductTitles()).toEqual([]);
+
+    await admin.patch(`/api/admin/products/${created.id}`, { isActive: true }).expect(200);
+    await admin.patch(`/api/admin/products/${created.id}`, { isActive: false }).expect(200);
+    await admin.patch(`/api/admin/products/${created.id}`, { isActive: true }).expect(200);
+    expect(await newProductTitles()).toEqual(["New arrival: Bath Towel"]);
+  });
+
+  it("stays quiet when new-product alerts are off, and for products added long ago", async () => {
+    const current = (await admin.get("/api/admin/settings").expect(200)).body.data;
+    await admin.put("/api/admin/settings", { ...current, notifications: { ...current.notifications, newProducts: false } }).expect(200);
+    await admin.post("/api/admin/products", { name: "Quiet Soap", category: await categoryId(), price: 500, stock: 2 }).expect(201);
+    expect(await newProductTitles()).toEqual([]);
+
+    await admin.put("/api/admin/settings", { ...current, notifications: { ...current.notifications, newProducts: true } }).expect(200);
+    // The seeded product is old: showing it again is not a new arrival.
+    await Product.collection.updateOne({ _id: new Types.ObjectId(productId) }, { $set: { isActive: false, createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } });
+    await admin.patch(`/api/admin/products/${productId}`, { isActive: true }).expect(200);
+    expect(await newProductTitles()).toEqual([]);
   });
 });
 

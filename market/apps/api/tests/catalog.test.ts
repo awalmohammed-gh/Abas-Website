@@ -169,6 +169,21 @@ describe("products", () => {
     expect(paged.body.data.items).toHaveLength(1);
   });
 
+  it("looks up visible products by ID for the wishlist", async () => {
+    const category = await createCategory();
+    const soap = (await admin.post("/api/admin/products", { name: "Lux Soap", category: category.id, price: 900, stock: 4 }).expect(201)).body.data;
+    const shirt = (await admin.post("/api/admin/products", { name: "Polo Shirt", category: category.id, price: 9000, stock: 3 }).expect(201)).body.data;
+    await admin.post("/api/admin/products", { name: "Towel", category: category.id, price: 500, stock: 1 }).expect(201);
+
+    const saved = await request(app).get(`/api/products?ids=${soap.id},${shirt.id}`).expect(200);
+    expect(saved.body.data.items.map((p: { name: string }) => p.name).sort()).toEqual(["Lux Soap", "Polo Shirt"]);
+
+    await admin.patch(`/api/admin/products/${shirt.id}`, { isActive: false }).expect(200);
+    expect((await request(app).get(`/api/products?ids=${soap.id},${shirt.id}`)).body.data.total).toBe(1);
+
+    await request(app).get("/api/products?ids=not-an-id").expect(400);
+  });
+
   it("stores an optional subcategory and includes it in search", async () => {
     const category = await createCategory("Clothing");
     const created = await admin

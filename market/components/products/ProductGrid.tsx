@@ -4,24 +4,27 @@ import { cn } from "@/lib/utils";
 import { ProductCard } from "./ProductCard";
 
 const GRID = "grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6";
+const LIST = "grid grid-cols-1 gap-3 sm:gap-4";
 
 export function ProductGrid({
   products,
   empty,
   priorityCount = 0,
+  layout = "grid",
   className,
 }: {
   products: ProductDTO[];
   empty?: ReactNode;
   priorityCount?: number;
+  layout?: "grid" | "list";
   className?: string;
 }) {
   if (!products.length) return <>{empty ?? null}</>;
   return (
-    <ul className={cn(GRID, className)}>
+    <ul className={cn(layout === "list" ? LIST : GRID, className)}>
       {products.map((product, index) => (
         <li key={product.id} className="min-w-0">
-          <ProductCard product={product} priority={index < priorityCount} />
+          <ProductCard product={product} priority={index < priorityCount} layout={layout} />
         </li>
       ))}
     </ul>

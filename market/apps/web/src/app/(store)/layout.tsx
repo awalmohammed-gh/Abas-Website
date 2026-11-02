@@ -32,7 +32,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={<SiteHeaderSkeleton />}>
           <SiteHeader />
         </Suspense>
-        <div className="flex min-w-0 flex-1 flex-col pb-24 max-md:pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0">
+        <div className="flex min-w-0 flex-1 flex-col pb-24 max-lg:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0">
           <main id="main" className="min-w-0 flex-1">
             {children}
           </main>

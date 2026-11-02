@@ -60,7 +60,8 @@ function mount({ blockedReason = null, checking = false, empty = false, post } =
 
 test("inline checkout exposes invalid delivery details before creating an order", async () => {
   const form = mount(); form.field("Full Name", "Ama Mensah"); form.field("Phone Number", "0241234567"); await form.submit();
-  assert.equal(form.find(node => node.type === "details").props.open, true);
+  // Delivery fields are always on screen, so the error is visible without expanding anything.
+  assert.equal(form.find(node => node.type === "details"), null);
   assert.match(form.find(node => node.props.label === "Delivery area or town").props.error, /delivery area/i);
   assert.equal(form.calls.reserved, 0); assert.equal(form.calls.posts.length, 0);
 });

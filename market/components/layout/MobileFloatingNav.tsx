@@ -33,7 +33,7 @@ export function MobileFloatingNav() {
   return (
     <nav
       aria-label="Storefront bottom navigation"
-      className="fixed left-3 right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-2xl border border-brand/10 bg-white/90 p-1.5 shadow-lg backdrop-blur-md md:hidden"
+      className="fixed left-3 right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-2xl border border-brand/10 bg-white/90 p-1.5 shadow-lg backdrop-blur-md lg:hidden"
     >
       <ul className="grid grid-cols-5 gap-1">
         {TABS.map((tab) => {

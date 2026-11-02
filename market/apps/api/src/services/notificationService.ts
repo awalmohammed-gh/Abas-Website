@@ -15,11 +15,12 @@ import {
   type Paginated,
 } from "@aba-mart/shared";
 import type { AuthenticatedAdmin } from "../middleware/adminAuth.js";
+import { Category } from "../models/Category.js";
 import { CustomerSession, type CustomerSessionDoc } from "../models/CustomerSession.js";
 import { Notification, type NotificationDoc } from "../models/Notification.js";
 import { NotificationReadState } from "../models/NotificationReadState.js";
 import { Order, type OrderDoc } from "../models/Order.js";
-import { Product } from "../models/Product.js";
+import { Product, type ProductDoc } from "../models/Product.js";
 import { Counter } from "../models/Counter.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toISO } from "../utils/serialize.js";
@@ -339,6 +340,54 @@ export async function deleteAdminNotifications(input: { ids?: string[]; all?: bo
     await NotificationReadState.deleteMany({ notification: { $in: ids } }, { session });
     return { deleted: result.deletedCount, skipped: docs.length - ids.length };
   });
+}
+
+/** Products saved hidden and shown later still count as new within this window; older ones never do. */
+const NEW_PRODUCT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+type AnnouncedProduct = Pick<ProductDoc, "_id" | "name" | "slug" | "price" | "images" | "category" | "isActive" | "isArchived" | "createdAt" | "variants">;
+
+/**
+ * Publishes a "new arrival" to the customer feed, with push to app users who allow
+ * new-product alerts, the first time a recently added product is visible in the store.
+ * The dedupe key limits it to once per product. It never throws: saving a product
+ * must not fail because an announcement could not be made.
+ */
+export async function announceNewProduct(product: AnnouncedProduct, admin?: AuthenticatedAdmin): Promise<void> {
+  try {
+    if (!product.isActive || product.isArchived) return;
+    if (Date.now() - product.createdAt.getTime() > NEW_PRODUCT_WINDOW_MS) return;
+    const settings = await getSettingsDoc();
+    const store = { ...DEFAULT_NOTIFICATION_SETTINGS, ...settings.notifications };
+    if (!store.enabled || !store.newProducts) return;
+    if (!await Category.exists({ _id: product.category, isActive: true })) return;
+
+    const prices = [product.price, ...product.variants.filter((variant) => variant.isActive).map((variant) => variant.price ?? product.price)];
+    const lowest = Math.min(...prices);
+    const priceText = prices.some((price) => price !== lowest) ? `from ${formatGHS(lowest)}` : formatGHS(lowest);
+    const name = product.name.length > 64 ? `${product.name.slice(0, 63)}…` : product.name;
+    const push = isPushConfigured() ? "queued" : "not_sent";
+    const now = new Date();
+    await Notification.create({
+      title: `New arrival: ${name}`,
+      message: `Now available at ${settings.storeName || "our store"} for ${priceText}. Tap to take a look.`,
+      type: "new_product",
+      audience: "public",
+      targetUrl: `/products/${product.slug}`,
+      imageUrl: product.images[0]?.url ?? "",
+      sendPush: true,
+      status: "published",
+      publishedAt: now,
+      createdBy: admin ? new Types.ObjectId(admin.id) : null,
+      createdByName: admin?.name ?? "",
+      dedupeKey: `new-product:${product._id.toString()}`,
+      push: { status: push },
+    });
+    if (push === "queued") schedulePushDeliveries();
+  } catch (error) {
+    // A duplicate key means this product was already announced.
+    if ((error as { code?: number }).code !== 11000) console.error("[notifications] new product announcement failed:", (error as Error).message);
+  }
 }
 
 /** Runs in the order transaction: failed changes and retries cannot create ghost updates. */

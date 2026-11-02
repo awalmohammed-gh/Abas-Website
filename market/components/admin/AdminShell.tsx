@@ -52,8 +52,8 @@ function AdminFrame({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="flex min-h-dvh min-w-0 bg-cream">
-        <aside className={cn("fixed inset-y-3 left-3 z-40 hidden overflow-hidden rounded-2xl border border-brand-deep/10 shadow-card motion-safe:transition-[width] motion-safe:duration-200 lg:block", sidebarCollapsed ? "w-20" : "w-64")}>
+      <div className="flex min-h-dvh min-w-0 bg-[#f6f8fc]">
+        <aside className={cn("fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-brand-deep/10 motion-safe:transition-[width] motion-safe:duration-200 lg:block", sidebarCollapsed ? "w-20" : "w-64")}>
           <AdminSidebar storeName={storeName} logo={logo} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed((collapsed) => !collapsed)} />
         </aside>
 
@@ -79,8 +79,8 @@ function AdminFrame({ children }: { children: ReactNode }) {
             </div>
           </dialog>
 
-        <div className={cn("flex min-w-0 flex-1 flex-col motion-safe:transition-[padding-left] motion-safe:duration-200", sidebarCollapsed ? "lg:pl-[6.5rem]" : "lg:pl-[17.5rem]")}>
-          <AdminHeader onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen} />
+        <div className={cn("flex min-w-0 flex-1 flex-col motion-safe:transition-[padding-left] motion-safe:duration-200", sidebarCollapsed ? "lg:pl-20" : "lg:pl-64")}>
+          <AdminHeader onOpenMenu={() => setMenuOpen(true)} menuOpen={menuOpen} storeName={storeName} logo={logo} />
           <main className="min-w-0 flex-1 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] lg:pt-8 lg:pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pl-[max(2rem,env(safe-area-inset-left))] lg:pr-[max(2rem,env(safe-area-inset-right))]">{children}</main>
         </div>
       </div>

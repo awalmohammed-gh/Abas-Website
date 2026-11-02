@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Benefits } from "@/components/home/Benefits";
-import { Categories, CategoriesSkeleton } from "@/components/home/Categories";
 import { FeaturedProducts, NewArrivals, SectionSkeleton } from "@/components/home/FeaturedProducts";
 import { Hero, HeroSkeleton } from "@/components/home/Hero";
 import { Promotions } from "@/components/home/Promotions";
@@ -66,9 +65,6 @@ export default async function HomePage() {
 
       <Suspense fallback={<HeroSkeleton />}>
         <Hero />
-      </Suspense>
-      <Suspense fallback={<CategoriesSkeleton />}>
-        <Categories />
       </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
         <FeaturedProducts />

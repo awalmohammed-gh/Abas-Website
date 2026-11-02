@@ -55,19 +55,27 @@ self.addEventListener("fetch", (event) => {
 
   if (isStaticAsset) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
+      (async () => {
+        // Cache Storage can throw (private windows, full or corrupt storage). A cache
+        // problem must never break the image itself, so fall back to the network.
+        let cache = null;
+        try {
+          cache = await caches.open(STATIC_CACHE);
+          const cached = await cache.match(event.request);
+          if (cached) return cached;
+        } catch {
+          cache = null;
+        }
         try {
           const response = await fetch(event.request);
-          if (response && response.ok) {
-            cache.put(event.request, response.clone());
+          if (cache && response && response.ok) {
+            cache.put(event.request, response.clone()).catch(() => undefined);
           }
           return response;
         } catch {
-          return cached || new Response("", { status: 404 });
+          return new Response("", { status: 404 });
         }
-      })
+      })()
     );
     return;
   }
@@ -87,8 +95,8 @@ self.addEventListener("fetch", (event) => {
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #FAF8F3;
-      color: #174C3C;
+      background: #F4F6FA;
+      color: #0D1D42;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -102,22 +110,22 @@ self.addEventListener("fetch", (event) => {
       border-radius: 1.25rem;
       padding: 2.5rem 2rem;
       max-width: 26rem;
-      box-shadow: 0 10px 25px -5px rgba(23, 76, 60, 0.08);
-      border: 1px solid #E5E1D8;
+      box-shadow: 0 10px 25px -5px rgba(13, 29, 66, 0.08);
+      border: 1px solid #E7EAF0;
     }
     h1 {
       font-size: 1.5rem;
       margin: 1rem 0 0.5rem;
-      color: #174C3C;
+      color: #0D1D42;
     }
     p {
-      color: #556B64;
+      color: #6B7487;
       font-size: 0.95rem;
       line-height: 1.5;
       margin: 0 0 1.5rem;
     }
     button {
-      background: #174C3C;
+      background: #0055C8;
       color: white;
       border: none;
       font-weight: 600;
@@ -132,7 +140,7 @@ self.addEventListener("fetch", (event) => {
 </head>
 <body>
   <div class="card">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#174C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0D1D42" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
       <line x1="1" y1="1" x2="23" y2="23"></line>
       <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
       <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
@@ -185,10 +193,16 @@ self.addEventListener("push", (event) => {
     typeof data.icon === "string" && /^(https:\/\/res\.cloudinary\.com\/|\/)/.test(data.icon)
       ? data.icon
       : FALLBACK_ICON;
+  // Large picture (supported on Android and desktop Chrome); same origin rules as the icon.
+  const image =
+    typeof data.image === "string" && /^(https:\/\/res\.cloudinary\.com\/|\/)/.test(data.image)
+      ? data.image
+      : undefined;
   event.waitUntil(
     self.registration.showNotification(title, {
       body: text(data.body, 300),
       icon,
+      image,
       badge: FALLBACK_ICON,
       tag: text(data.tag, 64) || undefined,
       data: { url: safeUrl(data.url) },

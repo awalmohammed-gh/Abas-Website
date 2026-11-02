@@ -24,6 +24,13 @@ export const publicProductQuerySchema = z.object({
   featured: flag,
   onSale: flag,
   exclude: objectIdSchema.optional(),
+  /** Comma-separated product IDs, e.g. a shopper's wishlist. */
+  ids: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value ? value.split(",") : undefined))
+    .pipe(z.array(objectIdSchema).min(1).max(48).optional()),
   page,
   limit: z.coerce.number().int().min(1).max(48).default(12),
 });

@@ -45,7 +45,7 @@ export function OverviewView() {
           <DashboardStats summary={data} />
 
           <Panel title="Order overview" actions={<Link href="/admin/orders" className="inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-brand hover:underline">Manage orders <FiArrowRight aria-hidden="true" /></Link>}>
-            <div className="px-4 pt-4 sm:px-5"><p className="text-xs text-muted">Confirm WhatsApp requests after receiving the customer's message. View all order details on the Orders page.</p></div>
+            <div className="px-4 pt-4 sm:px-5"><p className="text-xs text-muted">Confirm WhatsApp requests after receiving the customer&apos;s message. View all order details on the Orders page.</p></div>
             <ul className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:p-4 xl:grid-cols-5">
               {orderStatuses.map(({ label, value, href, icon: Icon, tone }) => (
                 <li key={label}><Link href={href} className="group flex h-full flex-col gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-line hover:bg-cream/70">

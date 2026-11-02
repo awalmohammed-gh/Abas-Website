@@ -64,7 +64,8 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           const shown = index === position;
           return <div key={`${slide.id}-${index}`} className="mart-product-slide" role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${count}: ${slide.title}`} aria-hidden={!shown || duplicate} inert={!shown || duplicate}>
             <Link href={slide.href} className="absolute inset-0 block" tabIndex={shown && !duplicate ? 0 : -1} aria-label={`Shop ${slide.title}`}>
-              <Image src={slide.image} alt={slide.alt} fill priority={index === 0} sizes="(min-width: 1024px) 620px, (min-width: 640px) 50vw, 100vw" className="object-contain" />
+              {/* The looping copy shares the first slide's URL, so it must not be lazy either or Next flags the LCP image. */}
+              <Image src={slide.image} alt={slide.alt} fill preload={index === 0} loading={duplicate ? "eager" : undefined} sizes="(min-width: 1024px) 620px, (min-width: 640px) 50vw, 100vw" className="object-contain" />
             </Link>
           </div>;
         })}

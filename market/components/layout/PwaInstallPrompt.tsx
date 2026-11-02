@@ -46,7 +46,7 @@ export function PwaInstallPrompt({ app }: { app: PwaApp }) {
   return createPortal(
     <aside data-pwa-install-prompt aria-labelledby={titleId} className={cn(
       "pointer-events-auto fixed inset-x-3 z-[60] isolate mx-auto max-w-sm rounded-2xl border border-brand/15 bg-white p-4 shadow-pop sm:inset-x-auto sm:left-5 sm:mx-0",
-      app === "store" ? "bottom-[calc(6.5rem+env(safe-area-inset-bottom))] md:bottom-5" : "bottom-[max(1rem,env(safe-area-inset-bottom))]",
+      app === "store" ? "bottom-[calc(6.5rem+env(safe-area-inset-bottom))] lg:bottom-5" : "bottom-[max(1rem,env(safe-area-inset-bottom))]",
     )}>
       <button type="button" onClick={dismiss} aria-label="Dismiss install invitation" className="absolute right-1 top-1 z-10 flex size-10 touch-manipulation items-center justify-center rounded-xl text-muted hover:bg-cream"><FiX className="size-4" aria-hidden="true" /></button>
       <div className="flex gap-3 pr-6"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand"><FiDownload className="size-5" aria-hidden="true" /></span><div><h2 id={titleId} className="text-sm font-semibold text-ink">{app === "admin" ? "Install ABA Mart Admin App" : "Install ABA Mart App"}</h2><p className="mt-1 text-xs leading-relaxed text-muted">{app === "admin" ? "Open your staff portal straight from your Home Screen." : "Keep the store and your orders one tap away."}</p></div></div>

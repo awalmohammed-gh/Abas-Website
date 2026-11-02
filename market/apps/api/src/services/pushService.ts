@@ -144,6 +144,7 @@ function payloadFor(notification: NotificationDoc, icon: string): string {
     url: notification.targetUrl || "/",
     tag: `aba-${notification._id.toString()}`,
     icon,
+    ...(notification.imageUrl ? { image: notification.imageUrl } : {}),
   });
 }
 

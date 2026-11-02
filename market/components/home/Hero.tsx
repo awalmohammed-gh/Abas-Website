@@ -20,10 +20,11 @@ export async function Hero() {
       <div className="mart-hero">
         <div className="mart-hero-copy">
           <h1 className="max-w-xl text-[2.5rem] font-extrabold leading-[1.12] tracking-[-0.04em] text-brand-deep sm:text-5xl lg:text-[3.5rem]">Everything You Love,<br /><span className="text-brand">All in One Place.</span></h1>
-          <p className="mt-4 max-w-md text-sm font-medium leading-relaxed text-brand-deep sm:text-lg">Discover amazing products, explore exciting collections and enjoy shopping made simple.</p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <ButtonLink href="/shop" size="md" leftIcon={<FiShoppingCart aria-hidden="true" />} rightIcon={<FiArrowRight aria-hidden="true" />}>Shop Now</ButtonLink>
-            <ButtonLink href="#categories" size="md" variant="secondary" className="border-brand text-brand-deep">Explore Categories</ButtonLink>
+          {/* Phones keep the hero to a short banner so products show on the first screen. */}
+          <p className="mt-4 hidden max-w-md text-sm font-medium leading-relaxed text-brand-deep sm:block sm:text-lg">Discover amazing products, explore exciting collections and enjoy shopping made simple.</p>
+          <div className="mt-3 flex flex-wrap gap-3 sm:mt-5">
+            <ButtonLink href="/shop" size="md" leftIcon={<FiShoppingCart aria-hidden="true" />} rightIcon={<FiArrowRight className="max-sm:hidden" aria-hidden="true" />}>Shop Now</ButtonLink>
+            <ButtonLink href="/shop?onSale=true" size="md" variant="secondary" className="border-brand text-brand-deep max-sm:hidden">View Deals</ButtonLink>
           </div>
         </div>
         <HeroCarousel slides={slides} />
@@ -32,5 +33,5 @@ export async function Hero() {
   );
 }
 export function HeroSkeleton() {
-  return <div className="container-page pt-8" aria-hidden="true"><div className="skeleton h-[440px] rounded-2xl" /></div>;
+  return <div className="container-page pt-2" aria-hidden="true"><div className="skeleton h-[200px] rounded-xl sm:h-[340px] sm:rounded-2xl" /></div>;
 }

@@ -7,7 +7,7 @@ import { formatGHS, priceRange, type AdminProductDTO } from "@aba-mart/shared";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
-interface ProductTableProps {
+export interface ProductTableProps {
   products: AdminProductDTO[];
   busyId: string | null;
   onToggleActive: (product: AdminProductDTO) => void;
@@ -19,7 +19,7 @@ interface ProductTableProps {
   onSelectionChange: (id: string, selected: boolean) => void;
 }
 
-function StatusBadges({ product }: { product: AdminProductDTO }) {
+export function StatusBadges({ product }: { product: AdminProductDTO }) {
   return (
     <div className="flex flex-wrap gap-1">
       {product.isArchived ? (
@@ -34,7 +34,7 @@ function StatusBadges({ product }: { product: AdminProductDTO }) {
   );
 }
 
-function stockLabel(product: AdminProductDTO) {
+export function stockLabel(product: AdminProductDTO) {
   const tone = product.stock <= 0 ? "text-danger" : product.stock <= product.lowStockThreshold ? "text-accent-700" : "text-ink";
   return (
     <span className={cn("font-semibold", tone)}>
@@ -44,7 +44,7 @@ function stockLabel(product: AdminProductDTO) {
   );
 }
 
-function priceLabel(product: AdminProductDTO) {
+export function priceLabel(product: AdminProductDTO) {
   const range = priceRange(product);
   return range.min === range.max ? formatGHS(range.min) : `${formatGHS(range.min)} – ${formatGHS(range.max)}`;
 }
@@ -59,8 +59,8 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
     const busy = busyId !== null;
     const iconButton = "inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-brand-50 hover:text-brand disabled:opacity-40";
     const deleteButton = (
-      <button type="button" disabled={busy} onClick={() => onDelete(product)} aria-label={`Permanently delete ${product.name}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger-50 disabled:opacity-40">
-        <FiTrash2 className="size-4" aria-hidden="true" /> Delete
+      <button type="button" disabled={busy} onClick={() => onDelete(product)} aria-label={`Permanently delete ${product.name}`} title="Delete permanently" className="inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-semibold text-danger hover:bg-danger-50 disabled:opacity-40">
+        <FiTrash2 className="size-4" aria-hidden="true" /><span className="md:max-2xl:hidden">Delete</span>
       </button>
     );
     if (product.isArchived) {
@@ -149,7 +149,8 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
 
       {/* Tablets and up: table */}
       <div className="hidden min-w-0 max-w-full overflow-x-auto overscroll-x-contain md:block" role="region" aria-label="Products table" tabIndex={0}>
-        <table className="w-full text-left text-sm">
+        {/* The site-wide overflow-wrap: anywhere would let table columns collapse to single letters. */}
+        <table className="w-full text-left text-sm [overflow-wrap:normal]">
           <thead className="border-b border-line bg-cream/60 text-xs uppercase tracking-wider text-muted">
             <tr>
               <th scope="col" className="w-14 px-2 py-3"><span className="sr-only">Select product</span></th>
@@ -167,10 +168,10 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
               <tr key={product.id} className={cn("hover:bg-cream/50", selectedIds.has(product.id) && "bg-brand-50/50")}>
                 <td className="px-2 py-3">{selectionControl(product)}</td>
                 <td className="px-5 py-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-52 items-center gap-3">
                     {thumb(product)}
                     <div className="min-w-0">
-                      <Link href={`/admin/products/${product.id}/edit`} className="line-clamp-1 font-semibold text-ink hover:text-brand">
+                      <Link href={`/admin/products/${product.id}/edit`} className="line-clamp-2 font-semibold text-ink hover:text-brand">
                         {product.name}
                       </Link>
                       <p className="text-xs text-muted">{product.category?.name ?? "No category"}</p>
@@ -184,7 +185,7 @@ export function ProductTable({ products, busyId, onToggleActive, onToggleFeature
                   )}
                 </td>
                 <td className="whitespace-nowrap px-3 py-3">{stockLabel(product)}</td>
-                <td className="px-3 py-3">
+                <td className="whitespace-nowrap px-3 py-3">
                   <StatusBadges product={product} />
                 </td>
                 <td className="px-5 py-3">{actions(product)}</td>

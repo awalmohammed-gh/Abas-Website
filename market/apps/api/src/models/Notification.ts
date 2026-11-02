@@ -28,6 +28,8 @@ export interface NotificationDoc {
   type: NotificationType;
   audience: NotificationAudience;
   targetUrl: string;
+  /** Optional picture shown large in the push message (e.g. a new product's main photo). */
+  imageUrl: string;
   status: "draft" | "published";
   sendPush: boolean;
   publishedAt: Date | null;
@@ -67,6 +69,7 @@ const notificationSchema = new Schema<NotificationDoc>(
     type: { type: String, enum: NOTIFICATION_TYPES, required: true },
     audience: { type: String, enum: NOTIFICATION_AUDIENCES, required: true },
     targetUrl: { type: String, default: "", maxlength: 300 },
+    imageUrl: { type: String, default: "", maxlength: 500 },
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     sendPush: { type: Boolean, default: false },
     publishedAt: { type: Date, default: null },

@@ -29,14 +29,14 @@ export async function adminGetProduct(req: Request, res: Response) {
 }
 
 export async function adminCreateProduct(req: Request, res: Response) {
-  sendSuccess(res, await productService.createProduct(req.body), 201);
+  sendSuccess(res, await productService.createProduct(req.body, req.admin), 201);
 }
 
 export async function adminUpdateProduct(req: Request, res: Response) {
   if (typeof req.body !== "object" || req.body === null || Array.isArray(req.body)) {
     throw ApiError.badRequest("Send the fields to update as a JSON object.");
   }
-  sendSuccess(res, await productService.updateProduct(id(req), req.body as Record<string, unknown>));
+  sendSuccess(res, await productService.updateProduct(id(req), req.body as Record<string, unknown>, req.admin));
 }
 
 export async function adminArchiveProduct(req: Request, res: Response) {

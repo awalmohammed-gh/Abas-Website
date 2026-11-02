@@ -14,7 +14,7 @@ export function DashboardStats({ summary }: { summary: DashboardSummary }) {
   ];
 
   return (
-    <ul aria-label="Store key figures" className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+    <ul aria-label="Store key figures" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map(({ label, value, note, href, icon: Icon, featured }) => (
         <li key={label}>
           <Link href={href} className={cn("group flex h-full min-w-0 flex-col rounded-2xl border p-5 transition-shadow hover:shadow-card", featured ? "border-brand bg-brand text-white" : "border-line bg-white text-ink")}>

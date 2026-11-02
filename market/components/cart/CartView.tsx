@@ -123,12 +123,13 @@ export function CartView({ whatsappEnabled, whatsappNotice }: { whatsappEnabled:
         </p>
       )}
 
+      {/* Items first: shoppers review what they're ordering before filling in the form. */}
       <div className="checkout-grid">
-        <WhatsAppCheckout blockedReason={blockedReason} checking={checking} expectedTotal={subtotal} onSubmittingChange={setSubmitting} onCartChanged={(updated, message) => { applyQuote(updated); setNotice(message + " Please review your cart before sending."); }} />
         <CartSummary itemCount={itemCount} subtotal={subtotal} checking={checking} issues={issues} locked={submitting} onClear={async () => {
           if (submitting || checking || !(await confirm({ title: "Remove all items from your cart?", confirmLabel: "Remove all", tone: "danger" }))) return;
           void clear().then(() => toast.success("Your cart is now empty."), () => undefined);
         }} />
+        <WhatsAppCheckout blockedReason={blockedReason} checking={checking} expectedTotal={subtotal} onSubmittingChange={setSubmitting} onCartChanged={(updated, message) => { applyQuote(updated); setNotice(message + " Please review your cart before sending."); }} />
       </div>
       <div className="checkout-privacy flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
         <p>Your cart is private to this browser visit.</p>

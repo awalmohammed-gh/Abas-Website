@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { Suspense } from "react";
 import { FaWhatsapp } from "react-icons/fa";
-import { FiArrowRight } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiGrid, FiShoppingBag, FiTruck, FiUserCheck } from "react-icons/fi";
 import { Benefits } from "@/components/home/Benefits";
 import { ButtonLink } from "@/components/ui/Button";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/config/site";
-import { getMetadataSettings, getSettings } from "@/lib/catalog";
+import { getCategories, getMetadataSettings, getSettings } from "@/lib/catalog";
+import { storefrontCategories } from "@/lib/storefrontCategories";
 import { supportChatUrl } from "@/lib/whatsapp";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,13 +28,56 @@ const STEPS = [
   { title: "We confirm with you", text: "Our team replies to confirm availability, delivery or pickup, and how you'd like to pay." },
 ];
 
-async function AboutIntro() {
-  const settings = await getSettings();
+const HIGHLIGHTS = [
+  { icon: FiUserCheck, text: "Shop as a guest, no account needed" },
+  { icon: FaWhatsapp, text: "Order and get answers on WhatsApp" },
+  { icon: FiTruck, text: "Choose delivery or pickup" },
+];
+
+async function AboutStory() {
+  const [settings, categories] = await Promise.all([getSettings(), getCategories()]);
+  const collections = storefrontCategories(categories);
+  const names = collections.map((c) => c.name);
+  const range = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names[0];
+  const description = settings.storeDescription
+    || `${settings.storeName} brings everyday essentials together in one friendly store${range ? `, from ${range}` : ""}.`;
+
   return (
-    <p className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
-      {settings.storeDescription ||
-        `${settings.storeName} brings everyday essentials together in one friendly store — from bathing soaps, shower gels and skincare to clothing and household products.`}
-    </p>
+    <div className="about-grid">
+      <section className="about-story" aria-labelledby="story-heading">
+        <h2 id="story-heading">Who We Are</h2>
+        <p>{description}</p>
+        <ul>
+          {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+            <li key={text}><span><Icon aria-hidden="true" /></span>{text}</li>
+          ))}
+        </ul>
+      </section>
+      <aside className="checkout-panel" aria-labelledby="find-heading">
+        <header className="checkout-panel-header">
+          <FiShoppingBag className="size-8 shrink-0" aria-hidden="true" />
+          <h2 id="find-heading">What You&apos;ll Find</h2>
+        </header>
+        <ul className="about-collections">
+          {collections.map((category) => (
+            <li key={category.slug}>
+              <Link href={`/categories/${category.slug}`}>
+                <FiCheck aria-hidden="true" />
+                <span>{category.name}</span>
+                <FiArrowRight aria-hidden="true" />
+              </Link>
+            </li>
+          ))}
+          <li>
+            <Link href="/shop" className="about-collections-all">
+              <FiGrid aria-hidden="true" />
+              <span>View all products</span>
+              <FiArrowRight aria-hidden="true" />
+            </Link>
+          </li>
+        </ul>
+      </aside>
+    </div>
   );
 }
 
@@ -39,16 +85,22 @@ async function AboutCta() {
   const settings = await getSettings();
   const chatUrl = supportChatUrl(settings, `Hello ${settings.storeName}!`);
   return (
-    <div className="flex flex-col gap-3 sm:flex-row">
-      <ButtonLink href="/shop" size="lg" rightIcon={<FiArrowRight className="size-5" aria-hidden="true" />}>
-        Start shopping
-      </ButtonLink>
-      {chatUrl && (
-        <ButtonLink href={chatUrl} external size="lg" variant="secondary" leftIcon={<FaWhatsapp className="size-5 text-whatsapp" aria-hidden="true" />}>
-          Say hello on WhatsApp
+    <section className="about-cta" aria-labelledby="cta-heading">
+      <div>
+        <h2 id="cta-heading">Ready to Start Shopping?</h2>
+        <p>Find what you need, then send your order to us on WhatsApp.</p>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <ButtonLink href="/shop" variant="accent" size="lg" rightIcon={<FiArrowRight className="size-5" aria-hidden="true" />}>
+          Start shopping
         </ButtonLink>
-      )}
-    </div>
+        {chatUrl && (
+          <ButtonLink href={chatUrl} external size="lg" variant="whatsapp" leftIcon={<FaWhatsapp className="size-5" aria-hidden="true" />}>
+            Chat on WhatsApp
+          </ButtonLink>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -64,41 +116,43 @@ export default function AboutPage() {
   };
 
   return (
-    <>
+    <div className="container-page pt-2 pb-8 sm:pb-12">
       <JsonLd data={breadcrumbSchema} />
-      <section className="container-page py-12 sm:py-16">
-        <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">About us</p>
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight text-ink sm:text-5xl">Everyday essentials, with a personal touch.</h1>
-        <Suspense fallback={<div className="skeleton mt-4 h-16 max-w-2xl" />}>
-          <AboutIntro />
-        </Suspense>
-      </section>
-
-      <section id="how-it-works" className="scroll-mt-24 border-y border-line bg-white py-14 sm:py-16" aria-labelledby="how-heading">
-        <div className="container-page">
-          <h2 id="how-heading" className="text-2xl font-bold text-ink sm:text-3xl">
-            How ordering works
-          </h2>
-          <p className="mt-2 max-w-2xl text-muted">No account, no card details and no app downloads. Just the WhatsApp you already use.</p>
-          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, index) => (
-              <li key={step.title} className="rounded-2xl border border-line bg-cream p-5">
-                <span className="flex size-10 items-center justify-center rounded-xl bg-brand font-display text-lg font-bold text-cream">{index + 1}</span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-ink">{step.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted">{step.text}</p>
-              </li>
-            ))}
-          </ol>
+      <header className="shop-hero about-hero">
+        <div className="shop-hero-copy">
+          <h1>About Us</h1>
+          <p>Everyday essentials, with a personal touch.</p>
         </div>
+        <div className="shop-hero-image">
+          <Image src="/images/home/aba-liquid-soap-v1.webp" alt="" fill preload sizes="(min-width: 1024px) 640px, 60vw" className="object-cover" />
+        </div>
+      </header>
+
+      <Suspense fallback={<div className="skeleton h-72" />}>
+        <AboutStory />
+      </Suspense>
+
+      <section id="how-it-works" className="about-steps scroll-mt-24" aria-labelledby="how-heading">
+        <h2 id="how-heading">How Ordering Works</h2>
+        <p>No account, no card details and no app downloads. Just the WhatsApp you already use.</p>
+        <ol>
+          {STEPS.map((step, index) => (
+            <li key={step.title}>
+              <span className="about-step-number">{index + 1}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <Benefits />
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+        <Benefits />
+      </div>
 
-      <section className="container-page py-14">
-        <Suspense fallback={null}>
-          <AboutCta />
-        </Suspense>
-      </section>
-    </>
+      <Suspense fallback={null}>
+        <AboutCta />
+      </Suspense>
+    </div>
   );
 }

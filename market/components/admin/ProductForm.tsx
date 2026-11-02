@@ -299,7 +299,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
   const savings = discountValue !== null && regularValue !== null && regularValue > discountValue ? Math.floor(((regularValue - discountValue) * 100) / regularValue) : null;
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="min-w-0 space-y-6">
         <Panel title="Details">
           <div className="space-y-4 p-4 sm:p-5">

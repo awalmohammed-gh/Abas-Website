@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { Suspense } from "react";
 import { FaWhatsapp } from "react-icons/fa";
-import { FiClock, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
+import { FiArrowRight, FiClock, FiHelpCircle, FiMail, FiMapPin, FiPackage, FiPhone, FiShoppingBag } from "react-icons/fi";
 import { formatPhoneDisplay } from "@aba-mart/shared";
 import { getMetadataSettings, getSettings } from "@/lib/catalog";
 import { supportChatUrl } from "@/lib/whatsapp";
@@ -18,53 +20,91 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** Only facts the store already states elsewhere: guest checkout, WhatsApp confirmation, My orders. */
+const FAQS = [
+  { q: "How do I place an order?", a: "Add products to your cart, fill in your details at checkout and send the order to us on WhatsApp." },
+  { q: "Do I need an account?", a: "No. You can shop and order without creating an account or paying online." },
+  { q: "How do I pay?", a: "Pay on delivery or by Mobile Money. We confirm the payment details with you on WhatsApp." },
+  { q: "How much is delivery?", a: "Delivery fees and timing depend on your area. We confirm them with you on WhatsApp before you pay." },
+];
+
+type Channel = { icon: typeof FiPhone; label: string; value: string; action?: string; href?: string; external?: boolean; tone?: "whatsapp" };
+
 async function ContactDetails() {
   const settings = await getSettings();
   const chatUrl = supportChatUrl(settings);
-  const items = [
-    chatUrl && { icon: FaWhatsapp, label: "WhatsApp", value: formatPhoneDisplay(settings.whatsappNumber), href: chatUrl, external: true },
-    settings.supportPhone && { icon: FiPhone, label: "Phone", value: settings.supportPhone, href: `tel:${settings.supportPhone.replace(/[^\d+]/g, "")}` },
-    settings.supportEmail && { icon: FiMail, label: "Email", value: settings.supportEmail, href: `mailto:${settings.supportEmail}` },
+  const channels = [
+    chatUrl && { icon: FaWhatsapp, label: "WhatsApp", value: formatPhoneDisplay(settings.whatsappNumber), action: "Chat with us", href: chatUrl, external: true, tone: "whatsapp" },
+    settings.supportPhone && { icon: FiPhone, label: "Phone", value: settings.supportPhone, action: "Call us", href: `tel:${settings.supportPhone.replace(/[^d+]/g, "")}` },
+    settings.supportEmail && { icon: FiMail, label: "Email", value: settings.supportEmail, action: "Email us", href: `mailto:${settings.supportEmail}` },
     settings.address && { icon: FiMapPin, label: "Location", value: settings.address },
     settings.openingHours && { icon: FiClock, label: "Business hours", value: settings.openingHours },
-  ].filter(Boolean) as { icon: typeof FiPhone; label: string; value: string; href?: string; external?: boolean }[];
+  ].filter(Boolean) as Channel[];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-      <ul className="space-y-3">
-        {items.length === 0 && (
-          <li className="rounded-2xl border border-line bg-white p-5 text-sm text-muted">Contact details will be published here shortly.</li>
+    <>
+      <section aria-labelledby="contact-channels-heading" className="mb-6">
+        <h2 id="contact-channels-heading" className="sr-only">Ways to reach us</h2>
+        {channels.length === 0 ? (
+          <p className="rounded-2xl border border-line bg-white p-5 text-sm text-muted">Contact details will be published here shortly.</p>
+        ) : (
+          <ul className="contact-channels">
+            {channels.map(({ icon: Icon, label, value, action, href, external, tone }) => {
+              const body = (
+                <>
+                  <span className="contact-channel-icon"><Icon aria-hidden="true" /></span>
+                  <span className="min-w-0 flex-1">
+                    <small>{label}</small>
+                    <strong className="whitespace-pre-line">{value}</strong>
+                    {action && <span className="contact-channel-action">{action}<FiArrowRight aria-hidden="true" /></span>}
+                  </span>
+                </>
+              );
+              return (
+                <li key={label}>
+                  {href ? (
+                    <a href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})} className={`contact-channel${tone ? " contact-channel-whatsapp" : ""}`}>
+                      {body}
+                      {external && <span className="sr-only"> (opens in a new tab)</span>}
+                    </a>
+                  ) : (
+                    <div className="contact-channel">{body}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
-        {items.map(({ icon: Icon, label, value, href, external }) => (
-          <li key={label} className="flex gap-4 rounded-2xl border border-line bg-white p-5">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
-              <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
-              {href ? (
-                <a
-                  href={href}
-                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  className="break-words font-semibold text-ink hover:text-brand"
-                >
-                  {value}
-                </a>
-              ) : (
-                <p className="whitespace-pre-line font-medium text-ink">{value}</p>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-      {settings.whatsappNumber ? (
-        <ContactForm whatsappNumber={settings.whatsappNumber} storeName={settings.storeName} />
-      ) : (
-        <div className="rounded-2xl border border-dashed border-line bg-white p-6 text-sm text-muted">
-          Our WhatsApp line is being set up. Please use the phone or email details for now.
-        </div>
-      )}
-    </div>
+      </section>
+
+      <div className="contact-grid">
+        {settings.whatsappNumber ? (
+          <ContactForm whatsappNumber={settings.whatsappNumber} storeName={settings.storeName} />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-line bg-white p-6 text-sm text-muted">
+            Our WhatsApp line is being set up. Please use the phone or email details for now.
+          </div>
+        )}
+        <aside className="checkout-panel" aria-labelledby="contact-faq-heading">
+          <header className="checkout-panel-header">
+            <FiHelpCircle className="size-8 shrink-0" aria-hidden="true" />
+            <h2 id="contact-faq-heading">Good to Know</h2>
+          </header>
+          <dl className="contact-faq">
+            {FAQS.map(({ q, a }) => (
+              <div key={q}>
+                <dt>{q}</dt>
+                <dd>{a}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="contact-links">
+            <Link href="/my-orders"><FiPackage aria-hidden="true" />Track my orders</Link>
+            <Link href="/shop"><FiShoppingBag aria-hidden="true" />Browse products</Link>
+          </div>
+        </aside>
+      </div>
+    </>
   );
 }
 
@@ -80,12 +120,16 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="container-page py-12 sm:py-16">
+    <div className="container-page pt-2 pb-8 sm:pb-12">
       <JsonLd data={breadcrumbSchema} />
-      <header className="mb-8 max-w-2xl">
-        <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-accent-700">Contact</p>
-        <h1 className="text-4xl font-bold text-ink sm:text-5xl">We&apos;re here to help</h1>
-        <p className="mt-3 text-lg text-muted">Questions about a product, delivery or your order? Reach us the way that suits you.</p>
+      <header className="shop-hero contact-hero">
+        <div className="shop-hero-copy">
+          <h1>Contact Us</h1>
+          <p>Questions about a product, delivery or your order? We&apos;re here to help.</p>
+        </div>
+        <div className="shop-hero-image">
+          <Image src="/images/home/shopping-hero-v2.webp" alt="" fill preload sizes="(min-width: 1024px) 640px, 60vw" className="object-cover" />
+        </div>
       </header>
       <Suspense fallback={<div className="skeleton h-80" />}>
         <ContactDetails />

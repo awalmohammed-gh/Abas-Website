@@ -17,7 +17,9 @@ import { nextSequence } from "../models/Counter.js";
 import { ApiError } from "../utils/ApiError.js";
 import { toAdminProductDTO, toProductDTO, type ProductLean } from "../utils/serialize.js";
 import type { AdminProductQuery, InventoryQuery, PublicProductQuery } from "../validators/productSchema.js";
+import type { AuthenticatedAdmin } from "../middleware/adminAuth.js";
 import { assertOwnedImages, cleanupRemovedImages } from "./imageService.js";
+import { announceNewProduct } from "./notificationService.js";
 import { revalidateStorefront } from "./revalidationService.js";
 
 const CATEGORY_FIELDS = "name slug";
@@ -66,6 +68,7 @@ export async function listPublicProducts(query: PublicProductQuery): Promise<Pag
     and.push({ $or: [{ compareAtPrice: { $gt: 0 } }, { variants: { $elemMatch: { isActive: true, compareAtPrice: { $gt: 0 } } } }] });
   }
   if (query.exclude) filter._id = { $ne: new Types.ObjectId(query.exclude) };
+  if (query.ids) and.push({ _id: { $in: query.ids.map((id) => new Types.ObjectId(id)) } });
   if (and.length) filter.$and = and;
 
   const [docs, total] = await Promise.all([
@@ -179,7 +182,7 @@ function applyInput(doc: InstanceType<typeof Product>, input: ProductInput): voi
   if (!input.variants.length) doc.stock = input.stock;
 }
 
-export async function createProduct(input: ProductInput): Promise<AdminProductDTO> {
+export async function createProduct(input: ProductInput, admin?: AuthenticatedAdmin): Promise<AdminProductDTO> {
   await assertCategoryExists(input.category);
   assertOwnedImages(input.images);
 
@@ -188,11 +191,12 @@ export async function createProduct(input: ProductInput): Promise<AdminProductDT
   await doc.save();
 
   revalidateStorefront("products", "categories");
+  await announceNewProduct(doc, admin);
   return getAdminProduct(doc._id.toString());
 }
 
 /** Partial updates are merged with the stored product and the result is validated as a whole. */
-export async function updateProduct(id: string, patch: Record<string, unknown>): Promise<AdminProductDTO> {
+export async function updateProduct(id: string, patch: Record<string, unknown>, admin?: AuthenticatedAdmin): Promise<AdminProductDTO> {
   const doc = await Product.findById(id);
   if (!doc) throw ApiError.notFound("Product not found.");
 
@@ -229,6 +233,8 @@ export async function updateProduct(id: string, patch: Record<string, unknown>):
 
   cleanupRemovedImages(previousImages, merged.images);
   revalidateStorefront("products", "categories");
+  // A recently added product that was saved hidden is announced when it is first shown.
+  await announceNewProduct(doc, admin);
   return getAdminProduct(id);
 }
 

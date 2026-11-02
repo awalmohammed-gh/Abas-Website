@@ -19,7 +19,7 @@ interface CartSummaryProps {
 export function CartSummary({ itemCount, subtotal, checking, issues, locked, onClear }: CartSummaryProps) {
   const { lines } = useCart();
   return <aside className="checkout-panel checkout-summary" aria-labelledby="summary-heading">
-    <header className="checkout-panel-header"><FiShoppingCart className="size-8 shrink-0" aria-hidden="true" /><h2 id="summary-heading">Order Summary<span className="sr-only">, {itemCount} items</span></h2></header>
+    <header className="checkout-panel-header"><FiShoppingCart className="size-8 shrink-0" aria-hidden="true" /><h2 id="summary-heading">Your Order</h2>{itemCount > 0 && <span className="checkout-count">{itemCount} item{itemCount === 1 ? "" : "s"}</span>}</header>
     <div className="checkout-summary-body">
       {lines.length ? <ul className="divide-y divide-[#dce2f1]">{lines.map(line => <CartItem key={line.key} line={line} issue={issues.get(line.key)} locked={locked} />)}</ul> : <div className="py-8 text-center"><FiShoppingCart className="mx-auto mb-3 size-10 text-brand/40" aria-hidden="true" /><p className="text-sm font-semibold">Your cart is empty</p><p className="mt-1 text-xs text-muted">Find something you love to get started.</p><ButtonLink href="/shop" size="sm" className="mt-4">Continue shopping</ButtonLink></div>}
       <dl className="checkout-totals"><div><dt>Subtotal</dt><dd>{formatGHS(subtotal)}</dd></div><div><dt>Shipping</dt><dd className="text-right text-xs font-medium text-muted">Confirmed on WhatsApp</dd></div><div className="checkout-total"><dt>Total</dt><dd aria-live="polite">{checking && <Spinner className="text-brand" label="Updating total" />}{formatGHS(subtotal)}</dd></div></dl>

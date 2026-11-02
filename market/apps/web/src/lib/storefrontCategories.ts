@@ -1,7 +1,5 @@
 import type { CategoryDTO } from "@aba-mart/shared";
 
-export const STOREFRONT_CATEGORY_LIMIT = 5;
-
 /** Display labels are curated; links retain the existing API's category slugs and IDs. */
 const COLLECTIONS = [
   { name: "Liquid Soap", aliases: ["liquid soap", "liquid soaps"] },

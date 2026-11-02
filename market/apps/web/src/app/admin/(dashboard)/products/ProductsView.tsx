@@ -2,9 +2,10 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { FiPackage, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiFilter, FiGrid, FiList, FiPackage, FiPlus, FiRefreshCw, FiSearch, FiTrash2 } from "react-icons/fi";
 import type { AdminProductDTO, CategoryDTO, Paginated } from "@aba-mart/shared";
-import { ErrorBlock, FilterTabs, LoadingBlock, PageHeader, Panel, SimplePagination } from "@/components/admin/AdminUI";
+import { ErrorBlock, LoadingBlock, PageHeader, Panel, SimplePagination } from "@/components/admin/AdminUI";
+import { ProductCards } from "@/components/admin/ProductCards";
 import { ProductTable } from "@/components/admin/ProductTable";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -12,14 +13,27 @@ import { useToast } from "@/components/ui/Toast";
 import { useAdminResource } from "@/hooks/useAdminResource";
 import { useDebounce } from "@/hooks/useDebounce";
 import { api, errorMessage } from "@/lib/api";
-import { buildQuery } from "@/lib/utils";
+import { buildQuery, cn } from "@/lib/utils";
 import { confirm } from "@/components/ui/ConfirmDialog";
 import { broadcastStoreEvent } from "@/lib/storeChannel";
 
 type Status = "all" | "active" | "inactive" | "archived";
 type StockFilter = "all" | "in" | "low" | "out";
 
-function ProductsContent() {
+const STATUS_OPTIONS: { value: Status; label: string }[] = [
+  { value: "all", label: "All products" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Hidden" },
+  { value: "archived", label: "Archived" },
+];
+const STOCK_OPTIONS: { value: StockFilter; label: string }[] = [
+  { value: "all", label: "Any stock" },
+  { value: "in", label: "In stock" },
+  { value: "low", label: "Low stock" },
+  { value: "out", label: "Out of stock" },
+];
+
+function ProductsContent({ initialSearch }: { initialSearch: string }) {
   const params = useSearchParams();
   const toast = useToast();
   const initialStatus = params.get("status");
@@ -28,7 +42,8 @@ function ProductsContent() {
   );
   const [stock, setStock] = useState<StockFilter>("all");
   const [category, setCategory] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selection, setSelection] = useState<{ scope: string; ids: string[] }>({ scope: "", ids: [] });
@@ -151,6 +166,22 @@ function ProductsContent() {
   }
 
   const result = products.data;
+  const filtered = !!q || status !== "all" || !!category || stock !== "all";
+
+  function changeFilter(apply: () => void) {
+    setSelection({ scope: "", ids: [] });
+    apply();
+    setPage(1);
+  }
+
+  function resetFilters() {
+    changeFilter(() => {
+      setStatus("all");
+      setStock("all");
+      setCategory("");
+      setSearch("");
+    });
+  }
 
   return (
     <>
@@ -164,127 +195,135 @@ function ProductsContent() {
         }
       />
 
-      <fieldset disabled={busyId !== null} className="mb-4 min-w-0 space-y-3">
-        <legend className="sr-only">Product filters</legend>
-        <FilterTabs<Status>
-          label="Product status"
-          value={status}
-          onChange={(v) => {
-            setSelection({ scope: "", ids: [] });
-            setStatus(v);
-            setPage(1);
-          }}
-          options={[
-            { value: "all", label: "All" },
-            { value: "active", label: "Active" },
-            { value: "inactive", label: "Hidden" },
-            { value: "archived", label: "Archived" },
-          ]}
-        />
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_200px_160px]">
-          <div className="relative">
-            <FiSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-            <label htmlFor="admin-product-search" className="sr-only">
-              Search products
-            </label>
-            <input
-              id="admin-product-search"
-              type="search"
-              value={search}
-              onChange={(e) => {
-                setSelection({ scope: "", ids: [] });
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by name or SKU"
-              className="h-11 w-full rounded-xl border border-line bg-white pl-10 pr-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
-            />
-          </div>
-          <select
-            aria-label="Filter by category"
-            value={category}
-            onChange={(e) => {
-              setSelection({ scope: "", ids: [] });
-              setCategory(e.target.value);
-              setPage(1);
-            }}
-            className="h-11 rounded-xl border border-line bg-white px-3 text-sm"
-          >
-            <option value="">All categories</option>
-            {(categories.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filter by stock"
-            value={stock}
-            onChange={(e) => {
-              setSelection({ scope: "", ids: [] });
-              setStock(e.target.value as StockFilter);
-              setPage(1);
-            }}
-            className="h-11 rounded-xl border border-line bg-white px-3 text-sm"
-          >
-            <option value="all">Any stock</option>
-            <option value="in">In stock</option>
-            <option value="low">Low stock</option>
-            <option value="out">Out of stock</option>
-          </select>
-        </div>
-      </fieldset>
+      <div className="admin-products">
+        <aside className="admin-filter" aria-labelledby="product-filter-heading">
+          <h2 id="product-filter-heading" className="admin-filter-title"><FiFilter aria-hidden="true" />Filter Products</h2>
+          <fieldset disabled={busyId !== null} className="admin-filter-groups contents">
+            <fieldset>
+              <legend>Status</legend>
+              {STATUS_OPTIONS.map((option) => (
+                <label key={option.value} className="admin-filter-option">
+                  <input type="radio" name="product-status" checked={status === option.value} onChange={() => changeFilter(() => setStatus(option.value))} />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Categories</legend>
+              <label className="admin-filter-option">
+                <input type="radio" name="product-category" checked={category === ""} onChange={() => changeFilter(() => setCategory(""))} />
+                <span>All categories</span>
+              </label>
+              {(categories.data ?? []).map((c) => (
+                <label key={c.id} className="admin-filter-option">
+                  <input type="radio" name="product-category" checked={category === c.id} onChange={() => changeFilter(() => setCategory(c.id))} />
+                  <span className="min-w-0 truncate">{c.name}</span>
+                  {c.productCount !== undefined && <span className="admin-filter-count">({c.productCount})</span>}
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Stock</legend>
+              {STOCK_OPTIONS.map((option) => (
+                <label key={option.value} className="admin-filter-option">
+                  <input type="radio" name="product-stock" checked={stock === option.value} onChange={() => changeFilter(() => setStock(option.value))} />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </fieldset>
+          </fieldset>
+          <Button type="button" className="mt-4 w-full" disabled={busyId !== null || !filtered} onClick={resetFilters} leftIcon={<FiRefreshCw className="size-4" aria-hidden="true" />}>
+            Reset filters
+          </Button>
+        </aside>
 
-      <Panel>
-        {result && result.items.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 border-b border-line p-3 sm:p-4">
-            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
-              <input ref={selectPageRef} type="checkbox" checked={allSelected} aria-checked={partiallySelected ? "mixed" : allSelected} disabled={listBusy} onChange={(event) => setSelection({ scope: selectionScope, ids: event.target.checked ? [...visibleIds] : [] })} className="size-5 accent-brand" />
-              Select this page ({result.items.length})
-            </label>
-            <span className="text-sm text-muted" role="status">{selectedCount} selected</span>
-            {selectedCount > 0 && <button type="button" disabled={listBusy} onClick={() => setSelection({ scope: selectionScope, ids: [] })} className="min-h-11 px-2 text-sm font-semibold text-brand disabled:opacity-50">Clear selection</button>}
-            <Button type="button" variant="danger" className="ml-auto" disabled={listBusy || !selectedCount} loading={busyId === "bulk-delete"} onClick={() => void deleteSelected()} leftIcon={<FiTrash2 className="size-4" aria-hidden="true" />}>Delete selected{selectedCount > 0 ? ` (${selectedCount})` : ""}</Button>
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-0 flex-1 basis-60">
+              <FiSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <label htmlFor="admin-product-search" className="sr-only">Search products</label>
+              <input
+                id="admin-product-search"
+                type="search"
+                value={search}
+                disabled={busyId !== null}
+                onChange={(e) => changeFilter(() => setSearch(e.target.value))}
+                placeholder="Search by name or SKU"
+                className="h-11 w-full rounded-xl border border-line bg-white pl-10 pr-3 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
+              />
+            </div>
+            <p className="text-sm text-ink" aria-live="polite">
+              {result ? (result.total ? `Showing ${(result.page - 1) * 20 + 1}–${Math.min(result.page * 20, result.total)} of ${result.total} products` : "No products") : ""}
+            </p>
+            <div role="group" aria-label="Product layout" className="ml-auto flex gap-0.5 rounded-lg border border-line bg-white p-0.5">
+              {([["grid", "Grid view", FiGrid], ["list", "List view", FiList]] as const).map(([value, label, Icon]) => (
+                <button key={value} type="button" onClick={() => setView(value)} aria-label={label} aria-pressed={view === value} className={cn("inline-flex size-9 items-center justify-center rounded-md transition-colors", view === value ? "bg-brand text-white" : "text-muted hover:bg-brand-50 hover:text-brand")}>
+                  <Icon className="size-4" aria-hidden="true" />
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {products.loading && !result ? (
-          <LoadingBlock label="Loading products" />
-        ) : products.error && !result ? (
-          <ErrorBlock message={products.error} onRetry={products.reload} />
-        ) : result && result.items.length === 0 ? (
-          <EmptyState
-            className="m-4 border-0"
-            icon={<FiPackage />}
-            title={q || status !== "all" || category || stock !== "all" ? "No products match these filters" : "No products yet"}
-            description={q || status !== "all" ? "Try another search or filter." : "Add your first product to start selling."}
-            action={<ButtonLink href="/admin/products/new">Add product</ButtonLink>}
-          />
-        ) : result ? (
-          <div className={products.loading ? "opacity-60 transition-opacity" : undefined}>
-            <ProductTable
-              products={result.items}
-              busyId={busyId ?? (listBusy ? "loading" : null)}
-              selectedIds={selectedIds}
-              onSelectionChange={toggleSelection}
-              onToggleActive={(p) => patch(p, { isActive: !p.isActive }, p.isActive ? `${p.name} is now hidden` : `${p.name} is now visible`)}
-              onToggleFeatured={(p) => patch(p, { isFeatured: !p.isFeatured }, p.isFeatured ? `${p.name} removed from featured` : `${p.name} is featured`)}
-              onArchive={archive}
-              onRestore={restore}
-              onDelete={permanentlyDelete}
-            />
-            <SimplePagination page={result.page} totalPages={result.totalPages} onChange={(nextPage) => { if (!busyId) { setSelection({ scope: "", ids: [] }); setPage(nextPage); } }} />
-          </div>
-        ) : null}
-      </Panel>
-      {result && <p className="mt-3 text-xs text-muted">{result.total} product{result.total === 1 ? "" : "s"}</p>}
+
+          <Panel>
+            {result && result.items.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-b border-line p-3 sm:p-4">
+                <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-ink">
+                  <input ref={selectPageRef} type="checkbox" checked={allSelected} aria-checked={partiallySelected ? "mixed" : allSelected} disabled={listBusy} onChange={(event) => setSelection({ scope: selectionScope, ids: event.target.checked ? [...visibleIds] : [] })} className="size-5 accent-brand" />
+                  Select this page ({result.items.length})
+                </label>
+                <span className="text-sm text-muted" role="status">{selectedCount} selected</span>
+                {selectedCount > 0 && <button type="button" disabled={listBusy} onClick={() => setSelection({ scope: selectionScope, ids: [] })} className="min-h-11 px-2 text-sm font-semibold text-brand disabled:opacity-50">Clear selection</button>}
+                <Button type="button" variant="danger" className="ml-auto" disabled={listBusy || !selectedCount} loading={busyId === "bulk-delete"} onClick={() => void deleteSelected()} leftIcon={<FiTrash2 className="size-4" aria-hidden="true" />}>Delete selected{selectedCount > 0 ? ` (${selectedCount})` : ""}</Button>
+              </div>
+            )}
+            {products.loading && !result ? (
+              <LoadingBlock label="Loading products" />
+            ) : products.error && !result ? (
+              <ErrorBlock message={products.error} onRetry={products.reload} />
+            ) : result && result.items.length === 0 ? (
+              <EmptyState
+                className="m-4 border-0"
+                icon={<FiPackage />}
+                title={filtered ? "No products match these filters" : "No products yet"}
+                description={filtered ? "Try another search or reset the filters." : "Add your first product to start selling."}
+                action={filtered ? <Button variant="secondary" onClick={resetFilters}>Reset filters</Button> : <ButtonLink href="/admin/products/new">Add product</ButtonLink>}
+              />
+            ) : result ? (
+              <div className={products.loading ? "opacity-60 transition-opacity" : undefined}>
+                {(() => {
+                  const listProps = {
+                    products: result.items,
+                    busyId: busyId ?? (listBusy ? "loading" : null),
+                    selectedIds,
+                    onSelectionChange: toggleSelection,
+                    onToggleActive: (p: AdminProductDTO) => patch(p, { isActive: !p.isActive }, p.isActive ? `${p.name} is now hidden` : `${p.name} is now visible`),
+                    onToggleFeatured: (p: AdminProductDTO) => patch(p, { isFeatured: !p.isFeatured }, p.isFeatured ? `${p.name} removed from featured` : `${p.name} is featured`),
+                    onArchive: archive,
+                    onRestore: restore,
+                    onDelete: permanentlyDelete,
+                  };
+                  return view === "grid" ? <ProductCards {...listProps} /> : <ProductTable {...listProps} />;
+                })()}
+                <SimplePagination page={result.page} totalPages={result.totalPages} onChange={(nextPage) => { if (!busyId) { setSelection({ scope: "", ids: [] }); setPage(nextPage); } }} />
+              </div>
+            ) : null}
+          </Panel>
+        </div>
+      </div>
     </>
   );
+}
+
+/** The header search opens this page with ?q=; a new query starts a fresh product list. */
+function ProductsFromUrl() {
+  const q = useSearchParams().get("q") ?? "";
+  return <ProductsContent key={q} initialSearch={q} />;
 }
 
 export function ProductsView() {
   return (
     <Suspense fallback={<LoadingBlock label="Loading products" />}>
-      <ProductsContent />
+      <ProductsFromUrl />
     </Suspense>
   );
 }
